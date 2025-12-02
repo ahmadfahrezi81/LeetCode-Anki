@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -98,12 +99,12 @@ func (l *LeetCodeService) FetchRandomProblems(easyCount, mediumCount, hardCount 
 // fetchRandomProblemSlug gets a random problem slug by difficulty
 func (l *LeetCodeService) fetchRandomProblemSlug(difficulty string) (string, error) {
 	query := `
-		query randomQuestion($categorySlug: String, $filters: QuestionListFilterInput) {
-			randomQuestion(categorySlug: $categorySlug, filters: $filters) {
-				titleSlug
-			}
-		}
-	`
+        query randomQuestion($categorySlug: String, $filters: QuestionListFilterInput) {
+            randomQuestion(categorySlug: $categorySlug, filters: $filters) {
+                titleSlug
+            }
+        }
+    `
 
 	variables := map[string]interface{}{
 		"categorySlug": "algorithms",
@@ -134,25 +135,188 @@ func (l *LeetCodeService) fetchRandomProblemSlug(difficulty string) (string, err
 	return result.RandomQuestion.TitleSlug, nil
 }
 
+// Fixed version of the LeetCode service methods
+
+// fetchTitleSlugByID gets the problem slug from its numeric LeetCode ID
+// This uses questionList to find the problem by its frontendQuestionId
+func (l *LeetCodeService) fetchTitleSlugByID(questionID int) (string, error) {
+	query := `
+        query problemsetQuestionList($categorySlug: String, $skip: Int, $limit: Int, $filters: QuestionListFilterInput) {
+            problemsetQuestionList: questionList(
+                categorySlug: $categorySlug
+                skip: $skip
+                limit: $limit
+                filters: $filters
+            ) {
+                questions: data {
+                    titleSlug
+                    frontendQuestionId: questionFrontendId
+                }
+            }
+        }
+    `
+
+	variables := map[string]interface{}{
+		"categorySlug": "",
+		"skip":         questionID - 1, // Skip to approximately the question
+		"limit":        100,            // Fetch a range around the ID
+		"filters":      map[string]interface{}{},
+	}
+
+	respData, err := l.executeQuery(query, variables)
+	if err != nil {
+		return "", err
+	}
+
+	var result struct {
+		ProblemsetQuestionList struct {
+			Questions []struct {
+				TitleSlug          string `json:"titleSlug"`
+				FrontendQuestionId string `json:"frontendQuestionId"`
+			} `json:"questions"`
+		} `json:"problemsetQuestionList"`
+	}
+
+	if err := json.Unmarshal(respData, &result); err != nil {
+		return "", fmt.Errorf("failed to parse slug response for ID %d: %w", questionID, err)
+	}
+
+	// Find the question with matching frontend ID
+	targetID := strconv.Itoa(questionID)
+	for _, q := range result.ProblemsetQuestionList.Questions {
+		if q.FrontendQuestionId == targetID {
+			return q.TitleSlug, nil
+		}
+	}
+
+	return "", fmt.Errorf("problem slug not found for ID: %d", questionID)
+}
+
+// Alternative approach: Use a mapping file or fetch all problems once
+// This is more efficient for batch operations like LeetCode 150
+
+func (l *LeetCodeService) FetchAllProblems() (map[int]string, error) {
+	// This fetches all problems and creates an ID -> slug mapping
+	allProblems := make(map[int]string)
+	skip := 0
+	limit := 100
+
+	for {
+		query := `
+            query problemsetQuestionList($categorySlug: String, $skip: Int, $limit: Int, $filters: QuestionListFilterInput) {
+                problemsetQuestionList: questionList(
+                    categorySlug: $categorySlug
+                    skip: $skip
+                    limit: $limit
+                    filters: $filters
+                ) {
+                    total: totalNum
+                    questions: data {
+                        titleSlug
+                        frontendQuestionId: questionFrontendId
+                    }
+                }
+            }
+        `
+
+		variables := map[string]interface{}{
+			"categorySlug": "",
+			"skip":         skip,
+			"limit":        limit,
+			"filters":      map[string]interface{}{},
+		}
+
+		respData, err := l.executeQuery(query, variables)
+		if err != nil {
+			return nil, err
+		}
+
+		var result struct {
+			ProblemsetQuestionList struct {
+				Total     int `json:"total"`
+				Questions []struct {
+					TitleSlug          string `json:"titleSlug"`
+					FrontendQuestionId string `json:"frontendQuestionId"`
+				} `json:"questions"`
+			} `json:"problemsetQuestionList"`
+		}
+
+		if err := json.Unmarshal(respData, &result); err != nil {
+			return nil, fmt.Errorf("failed to parse problems list: %w", err)
+		}
+
+		// Add to map
+		for _, q := range result.ProblemsetQuestionList.Questions {
+			id, err := strconv.Atoi(q.FrontendQuestionId)
+			if err == nil {
+				allProblems[id] = q.TitleSlug
+			}
+		}
+
+		// Check if we've fetched all problems
+		if len(result.ProblemsetQuestionList.Questions) < limit {
+			break
+		}
+
+		skip += limit
+
+		// Rate limiting
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	return allProblems, nil
+}
+
+// Optimized approach for seed_150/main.go
+func (l *LeetCodeService) FetchProblemsByIDs(problemIDs []int) ([]*LeetCodeProblem, error) {
+	// First, fetch all problems to build ID -> slug mapping
+	fmt.Println("Building problem ID to slug mapping...")
+	mapping, err := l.FetchAllProblems()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build problem mapping: %w", err)
+	}
+
+	problems := make([]*LeetCodeProblem, 0, len(problemIDs))
+
+	for _, id := range problemIDs {
+		slug, ok := mapping[id]
+		if !ok {
+			return nil, fmt.Errorf("problem ID %d not found in mapping", id)
+		}
+
+		problem, err := l.FetchProblemDetail(slug)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch problem %d (%s): %w", id, slug, err)
+		}
+
+		problems = append(problems, problem)
+
+		// Rate limiting
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	return problems, nil
+}
+
 // FetchProblemDetail fetches full details for a specific problem
 func (l *LeetCodeService) FetchProblemDetail(titleSlug string) (*LeetCodeProblem, error) {
 	query := `
-		query questionData($titleSlug: String!) {
-			question(titleSlug: $titleSlug) {
-				questionId
-				title
-				titleSlug
-				difficulty
-				content
-				topicTags {
-					name
-					slug
-				}
-				hints
-				sampleTestCase
-			}
-		}
-	`
+        query questionData($titleSlug: String!) {
+            question(titleSlug: $titleSlug) {
+                questionId
+                title
+                titleSlug
+                difficulty
+                content
+                topicTags {
+                    name
+                    slug
+                }
+                hints
+                sampleTestCase
+            }
+        }
+    `
 
 	variables := map[string]interface{}{
 		"titleSlug": titleSlug,
@@ -244,24 +408,5 @@ func StripHTMLTags(content string) string {
 		return strings.TrimSpace(content)
 	}
 
-	return markdown
-}
-
-// GenerateApproachHint creates a hint from the problem's hints or topics
-func GenerateApproachHint(problem *LeetCodeProblem) string {
-	if len(problem.Hints) > 0 {
-		// Use first hint as approach
-		return problem.Hints[0]
-	}
-
-	// Fallback: generate from topics
-	if len(problem.TopicTags) > 0 {
-		topics := make([]string, len(problem.TopicTags))
-		for i, tag := range problem.TopicTags {
-			topics[i] = tag.Name
-		}
-		return fmt.Sprintf("Consider using: %s", strings.Join(topics, ", "))
-	}
-
-	return "Think about the optimal data structure and algorithmic approach for this problem."
+	return strings.TrimSpace(markdown)
 }

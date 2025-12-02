@@ -12,7 +12,7 @@ import (
 func GetQuestionByID(questionID string) (*models.Question, error) {
 	query := `
 		SELECT id, leetcode_id, title, slug, difficulty, 
-		       description_markdown, topics, correct_approach, created_at
+		       description_markdown, topics, created_at
 		FROM questions
 		WHERE id = $1
 	`
@@ -22,7 +22,7 @@ func GetQuestionByID(questionID string) (*models.Question, error) {
 
 	err := DB.QueryRow(query, questionID).Scan(
 		&q.ID, &q.LeetcodeID, &q.Title, &q.Slug, &q.Difficulty,
-		&q.DescriptionMarkdown, &topics, &q.CorrectApproach, &q.CreatedAt,
+		&q.DescriptionMarkdown, &topics, &q.CreatedAt,
 	)
 
 	if err != nil {
@@ -128,7 +128,7 @@ func GetNextLearningCard(userID string) (*models.Card, error) {
 			r.current_step, r.repetitions, r.next_review_at,
 			r.last_reviewed_at, r.total_reviews, r.total_lapses, r.created_at,
 			q.id, q.leetcode_id, q.title, q.slug, q.difficulty,
-			q.description_markdown, q.topics, q.correct_approach, q.created_at
+			q.description_markdown, q.topics, q.created_at
 		FROM reviews r
 		JOIN questions q ON r.question_id = q.id
 		WHERE r.user_id = $1
@@ -153,7 +153,7 @@ func GetNextLearningCard(userID string) (*models.Card, error) {
 		&card.Question.ID, &card.Question.LeetcodeID, &card.Question.Title,
 		&card.Question.Slug, &card.Question.Difficulty,
 		&card.Question.DescriptionMarkdown, &topics,
-		&card.Question.CorrectApproach, &card.Question.CreatedAt,
+		&card.Question.CreatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -185,7 +185,7 @@ func GetNextReviewCard(userID string) (*models.Card, error) {
 			r.current_step, r.repetitions, r.next_review_at,
 			r.last_reviewed_at, r.total_reviews, r.total_lapses, r.created_at,
 			q.id, q.leetcode_id, q.title, q.slug, q.difficulty,
-			q.description_markdown, q.topics, q.correct_approach, q.created_at
+			q.description_markdown, q.topics, q.created_at
 		FROM reviews r
 		JOIN questions q ON r.question_id = q.id
 		WHERE r.user_id = $1
@@ -210,7 +210,7 @@ func GetNextReviewCard(userID string) (*models.Card, error) {
 		&card.Question.ID, &card.Question.LeetcodeID, &card.Question.Title,
 		&card.Question.Slug, &card.Question.Difficulty,
 		&card.Question.DescriptionMarkdown, &topics,
-		&card.Question.CorrectApproach, &card.Question.CreatedAt,
+		&card.Question.CreatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -361,7 +361,7 @@ func GetNextCard(userID string) (*models.Card, error) {
 	query := `
 		SELECT 
 			q.id, q.leetcode_id, q.title, q.slug, q.difficulty,
-			q.description_markdown, q.topics, q.correct_approach, q.created_at,
+			q.description_markdown, q.topics, q.created_at,
 			r.id, r.user_id, r.question_id, r.card_state, r.quality,
 			r.easiness_factor, r.interval_days, r.interval_minutes, r.current_step, r.repetitions,
 			r.next_review_at, r.last_reviewed_at, r.total_reviews, r.total_lapses, r.created_at
@@ -380,7 +380,7 @@ func GetNextCard(userID string) (*models.Card, error) {
 	err := DB.QueryRow(query, userID, time.Now()).Scan(
 		&card.Question.ID, &card.Question.LeetcodeID, &card.Question.Title,
 		&card.Question.Slug, &card.Question.Difficulty, &card.Question.DescriptionMarkdown,
-		&topics, &card.Question.CorrectApproach, &card.Question.CreatedAt,
+		&topics, &card.Question.CreatedAt,
 		&card.Review.ID, &card.Review.UserID, &card.Review.QuestionID,
 		&card.Review.CardState, &quality, &card.Review.EasinessFactor,
 		&card.Review.IntervalDays, &card.Review.IntervalMinutes, &card.Review.CurrentStep,
@@ -412,7 +412,7 @@ func GetNextCard(userID string) (*models.Card, error) {
 func GetNewCard(userID string) (*models.Question, error) {
 	query := `
 		SELECT q.id, q.leetcode_id, q.title, q.slug, q.difficulty,
-		       q.description_markdown, q.topics, q.correct_approach, q.created_at
+		       q.description_markdown, q.topics, q.created_at
 		FROM questions q
 		WHERE NOT EXISTS (
 			SELECT 1 FROM reviews r 
@@ -427,7 +427,7 @@ func GetNewCard(userID string) (*models.Question, error) {
 
 	err := DB.QueryRow(query, userID).Scan(
 		&q.ID, &q.LeetcodeID, &q.Title, &q.Slug, &q.Difficulty,
-		&q.DescriptionMarkdown, &topics, &q.CorrectApproach, &q.CreatedAt,
+		&q.DescriptionMarkdown, &topics, &q.CreatedAt,
 	)
 
 	if err == sql.ErrNoRows {

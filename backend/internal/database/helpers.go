@@ -15,7 +15,7 @@ func GetAllQuestionsWithProgress(userID string, filters models.QuestionFilters) 
 	query := `
 		SELECT 
 			q.id, q.leetcode_id, q.title, q.slug, q.difficulty,
-			q.description_markdown, q.topics, q.correct_approach, q.created_at,
+			q.description_markdown, q.topics, q.created_at,
 			r.card_state, r.interval_days, r.next_review_at,
 			r.total_reviews, r.total_lapses, r.easiness_factor
 		FROM questions q
@@ -94,7 +94,7 @@ func GetAllQuestionsWithProgress(userID string, filters models.QuestionFilters) 
 			&qp.Question.ID, &qp.Question.LeetcodeID, &qp.Question.Title,
 			&qp.Question.Slug, &qp.Question.Difficulty,
 			&qp.Question.DescriptionMarkdown, &topics,
-			&qp.Question.CorrectApproach, &qp.Question.CreatedAt,
+			&qp.Question.CreatedAt,
 			&cardState, &intervalDays, &nextReviewAt,
 			&totalReviews, &totalLapses, &easinessFactor,
 		)
@@ -178,7 +178,7 @@ func SearchQuestions(userID, searchTerm string, limit int) ([]models.QuestionWit
 	query := `
 		SELECT 
 			q.id, q.leetcode_id, q.title, q.slug, q.difficulty,
-			q.description_markdown, q.topics, q.correct_approach, q.created_at,
+			q.description_markdown, q.topics, q.created_at,
 			r.card_state, r.interval_days, r.next_review_at,
 			r.total_reviews, r.total_lapses, r.easiness_factor
 		FROM questions q
@@ -215,7 +215,7 @@ func SearchQuestions(userID, searchTerm string, limit int) ([]models.QuestionWit
 			&qp.Question.ID, &qp.Question.LeetcodeID, &qp.Question.Title,
 			&qp.Question.Slug, &qp.Question.Difficulty,
 			&qp.Question.DescriptionMarkdown, &topics,
-			&qp.Question.CorrectApproach, &qp.Question.CreatedAt,
+			&qp.Question.CreatedAt,
 			&cardState, &intervalDays, &nextReviewAt,
 			&totalReviews, &totalLapses, &easinessFactor,
 		)

@@ -106,12 +106,11 @@ func (h *AdminHandler) insertProblem(problem *services.LeetCodeProblem) error {
 	fmt.Sscanf(problem.QuestionID, "%d", &leetcodeID)
 
 	descriptionMarkdown := services.StripHTMLTags(problem.Content)
-	correctApproach := services.GenerateApproachHint(problem)
 
 	query := `
 		INSERT INTO questions 
-		(leetcode_id, title, slug, difficulty, description_markdown, topics, correct_approach)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		(leetcode_id, title, slug, difficulty, description_markdown, topics)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (leetcode_id) DO NOTHING
 		RETURNING id
 	`
@@ -125,7 +124,6 @@ func (h *AdminHandler) insertProblem(problem *services.LeetCodeProblem) error {
 		problem.Difficulty,
 		descriptionMarkdown,
 		pq.Array(topics),
-		correctApproach,
 	).Scan(&id)
 
 	return err

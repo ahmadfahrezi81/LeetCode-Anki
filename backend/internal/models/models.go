@@ -13,7 +13,6 @@ type Question struct {
 	Difficulty          string    `json:"difficulty"`
 	DescriptionMarkdown string    `json:"description_markdown"`
 	Topics              []string  `json:"topics"`
-	CorrectApproach     string    `json:"correct_approach"`
 	CreatedAt           time.Time `json:"created_at"`
 }
 
@@ -76,13 +75,36 @@ type SkipRequest struct {
 
 // SubmitAnswerResponse is the response after scoring
 type SubmitAnswerResponse struct {
-	Score           int       `json:"score"`
-	Feedback        string    `json:"feedback"`
-	CorrectApproach string    `json:"correct_approach"`
-	NextReviewAt    time.Time `json:"next_review_at"`
-	CardState       string    `json:"card_state"`
-	IntervalMinutes int       `json:"interval_minutes"`
-	IntervalDays    int       `json:"interval_days"`
+	Score             int                `json:"score"`
+	Feedback          string             `json:"feedback"`
+	CorrectApproach   string             `json:"correct_approach"`
+	SubScores         *SubScores         `json:"sub_scores"`         // Remove ,omitempty
+	SolutionBreakdown *SolutionBreakdown `json:"solution_breakdown"` // Remove ,omitempty
+	NextReviewAt      time.Time          `json:"next_review_at"`
+	CardState         string             `json:"card_state"`
+	IntervalMinutes   int                `json:"interval_minutes"`
+	IntervalDays      int                `json:"interval_days"`
+}
+
+// SubScores provides granular feedback on different aspects
+type SubScores struct {
+	PatternRecognition      int `json:"pattern_recognition"`      // 0-5: Did they identify the right pattern?
+	AlgorithmicCorrectness  int `json:"algorithmic_correctness"`  // 0-5: Is their approach correct?
+	ComplexityUnderstanding int `json:"complexity_understanding"` // 0-5: Do they understand time/space complexity?
+	EdgeCaseAwareness       int `json:"edge_case_awareness"`      // 0-5: Did they consider edge cases?
+}
+
+// SolutionBreakdown provides comprehensive solution explanation
+type SolutionBreakdown struct {
+	Pattern               string   `json:"pattern"`                // e.g., "Two Pointers", "Dynamic Programming"
+	WhyThisPattern        string   `json:"why_this_pattern"`       // Explanation of why this pattern fits
+	ApproachSteps         []string `json:"approach_steps"`         // Step-by-step algorithm explanation
+	Pseudocode            string   `json:"pseudocode"`             // Reference pseudocode
+	TimeComplexity        string   `json:"time_complexity"`        // e.g., "O(n)"
+	SpaceComplexity       string   `json:"space_complexity"`       // e.g., "O(1)"
+	ComplexityExplanation string   `json:"complexity_explanation"` // Why this complexity
+	KeyInsights           []string `json:"key_insights"`           // What makes this solution optimal
+	CommonPitfalls        []string `json:"common_pitfalls"`        // What to watch out for
 }
 
 // UserStats represents user's overall statistics

@@ -102,10 +102,34 @@ export interface QuestionStats {
 }
 
 // Existing answer‑related types
+export interface SubScores {
+  pattern_recognition: number;      // 0-5
+  algorithmic_correctness: number;  // 0-5
+  complexity_understanding: number; // 0-5
+  edge_case_awareness: number;      // 0-5
+}
+
+export interface SolutionBreakdown {
+  pattern: string;
+  why_this_pattern: string;
+  approach_steps: string[];
+  pseudocode: string;
+  time_complexity: string;
+  space_complexity: string;
+  complexity_explanation: string;
+  key_insights: string[];
+  common_pitfalls: string[];
+}
+
 export interface SubmitAnswerResponse {
   score: number;
   feedback: string;
-  correct_approach: string;
+  correct_approach: string; // Deprecated: Use solution_breakdown instead
+  sub_scores?: SubScores;
+  solution_breakdown?: SolutionBreakdown;
   next_review_at: string;
   card_state: string;
+  interval_minutes: number;
+  interval_days: number;
 }
+

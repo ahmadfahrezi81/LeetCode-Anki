@@ -7,6 +7,7 @@ import (
 	"leetcode-anki/backend/internal/database"
 	"leetcode-anki/backend/internal/models"
 	"leetcode-anki/backend/internal/services"
+	"log"
 	"net/http"
 	"time"
 
@@ -186,16 +187,23 @@ func (h *ReviewHandler) SubmitAnswer(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	score, feedback, err := h.llmService.ScoreAnswer(
+	score, feedback, correctApproach, subScores, solutionBreakdown, err := h.llmService.ScoreAnswer(
 		ctx,
 		question.Title,
 		question.DescriptionMarkdown,
-		question.CorrectApproach,
 		req.Answer,
 	)
 
+	// ADD THIS LOGGING:
+	log.Printf("🔍 LLM Response:")
+	log.Printf("   Score: %d", score)
+	log.Printf("   SubScores: %+v", subScores)
+	log.Printf("   SolutionBreakdown: %+v", solutionBreakdown)
+	log.Printf("   Error: %v", err)
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to score answer"})
+		log.Printf("❌ LLM ERROR: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to score answer: %v", err)})
 		return
 	}
 
@@ -214,13 +222,15 @@ func (h *ReviewHandler) SubmitAnswer(c *gin.Context) {
 
 	// Return response with enhanced info
 	c.JSON(http.StatusOK, models.SubmitAnswerResponse{
-		Score:           score,
-		Feedback:        feedback,
-		CorrectApproach: question.CorrectApproach,
-		NextReviewAt:    review.NextReviewAt,
-		CardState:       review.CardState,
-		IntervalMinutes: review.IntervalMinutes,
-		IntervalDays:    review.IntervalDays,
+		Score:             score,
+		Feedback:          feedback,
+		CorrectApproach:   correctApproach,
+		SubScores:         subScores,
+		SolutionBreakdown: solutionBreakdown,
+		NextReviewAt:      review.NextReviewAt,
+		CardState:         review.CardState,
+		IntervalMinutes:   review.IntervalMinutes,
+		IntervalDays:      review.IntervalDays,
 	})
 }
 
@@ -300,16 +310,14 @@ func (h *ReviewHandler) insertProblem(problem *services.LeetCodeProblem) error {
 	fmt.Sscanf(problem.QuestionID, "%d", &leetcodeID)
 
 	descriptionMarkdown := services.StripHTMLTags(problem.Content)
-	correctApproach := services.GenerateApproachHint(problem)
 
 	query := `
 		INSERT INTO questions 
-		(leetcode_id, title, slug, difficulty, description_markdown, topics, correct_approach)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		(leetcode_id, title, slug, difficulty, description_markdown, topics)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (leetcode_id) 
 		DO UPDATE SET 
 			description_markdown = EXCLUDED.description_markdown,
-			correct_approach = EXCLUDED.correct_approach,
 			topics = EXCLUDED.topics
 	`
 
@@ -321,7 +329,6 @@ func (h *ReviewHandler) insertProblem(problem *services.LeetCodeProblem) error {
 		problem.Difficulty,
 		descriptionMarkdown,
 		topics,
-		correctApproach,
 	)
 
 	return err

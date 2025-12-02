@@ -2,10 +2,11 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"leetcode-anki/backend/config"
-	"strconv"
-	"strings"
+	"leetcode-anki/backend/internal/models"
+	"log"
 
 	openai "github.com/sashabaranov/go-openai"
 )
@@ -19,52 +20,93 @@ func NewLLMService() *LLMService {
 	return &LLMService{client: client}
 }
 
-// ScoreAnswer uses GPT to score the user's explanation
-func (l *LLMService) ScoreAnswer(ctx context.Context, questionTitle, questionDescription, correctApproach, userAnswer string) (int, string, error) {
-	prompt := l.buildScoringPrompt(questionTitle, questionDescription, correctApproach, userAnswer)
+// LLMResponse matches the JSON structure from the LLM
+type LLMResponse struct {
+	Score     int           `json:"score"`
+	SubScores SubScoresJSON `json:"sub_scores"`
+	Feedback  string        `json:"feedback"`
+	Solution  SolutionJSON  `json:"solution"`
+}
+
+type SubScoresJSON struct {
+	PatternRecognition      int `json:"pattern_recognition"`
+	AlgorithmicCorrectness  int `json:"algorithmic_correctness"`
+	ComplexityUnderstanding int `json:"complexity_understanding"`
+	EdgeCaseAwareness       int `json:"edge_case_awareness"`
+}
+
+type SolutionJSON struct {
+	Pattern               string   `json:"pattern"`
+	WhyThisPattern        string   `json:"why_this_pattern"`
+	ApproachSteps         []string `json:"approach_steps"`
+	Pseudocode            string   `json:"pseudocode"`
+	TimeComplexity        string   `json:"time_complexity"`
+	SpaceComplexity       string   `json:"space_complexity"`
+	ComplexityExplanation string   `json:"complexity_explanation"`
+	KeyInsights           []string `json:"key_insights"`
+	CommonPitfalls        []string `json:"common_pitfalls"`
+	CorrectApproach       string   `json:"correct_approach"`
+}
+
+// ScoreAnswer uses GPT to score the user's explanation with comprehensive feedback
+func (l *LLMService) ScoreAnswer(ctx context.Context, questionTitle, questionDescription, userAnswer string) (int, string, string, *models.SubScores, *models.SolutionBreakdown, error) {
+	prompt := l.buildScoringPrompt(questionTitle, questionDescription, userAnswer)
 
 	resp, err := l.client.CreateChatCompletion(
 		ctx,
 		openai.ChatCompletionRequest{
-			Model: openai.GPT4oMini, // Using GPT-4o-mini for cost efficiency
+			Model: openai.GPT4o,
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleSystem,
-					Content: "You are an expert algorithm tutor evaluating a student's understanding of problem-solving approaches.",
+					Content: "You are an expert algorithm tutor. You provide structured feedback in JSON format to help students master problem-solving patterns.",
 				},
 				{
 					Role:    openai.ChatMessageRoleUser,
 					Content: prompt,
 				},
 			},
-			Temperature: 0.3, // Lower temperature for more consistent scoring
-			MaxTokens:   200,
+			Temperature: 0.1,
+			MaxTokens:   2500,
 		},
 	)
 
 	if err != nil {
-		return 0, "", fmt.Errorf("OpenAI API error: %w", err)
+		return 0, "", "", nil, nil, fmt.Errorf("OpenAI API error: %w", err)
 	}
 
 	if len(resp.Choices) == 0 {
-		return 0, "", fmt.Errorf("no response from OpenAI")
+		return 0, "", "", nil, nil, fmt.Errorf("no response from OpenAI")
 	}
 
 	response := resp.Choices[0].Message.Content
-	score, feedback := l.parseResponse(response)
 
-	return score, feedback, nil
+	// Log the raw response for debugging
+	log.Printf("🤖 Raw LLM Response:\n%s\n", response)
+
+	// Parse the JSON response
+	score, feedback, correctApproach, subScores, solutionBreakdown, err := l.parseJSONResponse(response)
+
+	log.Printf("📊 Score: %d", score)
+	log.Printf("📝 Feedback: %s", feedback)
+	log.Printf("🎯 Correct Approach: %s", correctApproach)
+	log.Printf("📈 SubScores: %+v", subScores)
+	log.Printf("💡 Solution Breakdown: %+v", solutionBreakdown)
+
+	if err != nil {
+		log.Printf("❌ Failed to parse LLM response: %v", err)
+		return 0, "", "", nil, nil, fmt.Errorf("failed to parse LLM response: %w", err)
+	}
+
+	return score, feedback, correctApproach, subScores, solutionBreakdown, nil
 }
 
-func (l *LLMService) buildScoringPrompt(questionTitle, questionDescription, correctApproach, userAnswer string) string {
-	return fmt.Sprintf(`You are evaluating a student's understanding of algorithm problem-solving logic.
+func (l *LLMService) buildScoringPrompt(questionTitle, questionDescription, userAnswer string) string {
+	return fmt.Sprintf(`You are evaluating a student's understanding of algorithm problem-solving.
 
 **Problem:** %s
 
 **Problem Description:**
-%s
-
-**Correct Approach:**
 %s
 
 **Student's Explanation:**
@@ -73,59 +115,131 @@ func (l *LLMService) buildScoringPrompt(questionTitle, questionDescription, corr
 ---
 
 **Your Task:**
-Score the student's explanation from 0-5 based on how well they understand the correct approach:
+Evaluate the student's understanding and provide comprehensive, pedagogical feedback.
 
-- **5**: Perfect understanding. The student correctly identifies the key algorithmic pattern/data structure and explains the core logic accurately.
-- **4**: Strong understanding. Minor details missing but core approach is correct.
-- **3**: Acceptable understanding. Gets the main idea but has some conceptual gaps or inefficiencies.
-- **2**: Weak understanding. Identifies some relevant concepts but approach is flawed.
-- **1**: Poor understanding. Approach is incorrect but shows some problem-solving attempt.
-- **0**: No understanding. Answer is completely wrong or irrelevant.
+**Evaluation Criteria:**
 
-**Important:** Focus on the *algorithmic approach* and *logic*, NOT code syntax. The student should explain the strategy (e.g., "use a hashmap to store complements", "two pointers from both ends", "BFS traversal").
+1. **Overall Score (0-5):**
+   - 5: Perfect understanding
+   - 4: Strong understanding, minor gaps
+   - 3: Acceptable, some conceptual gaps
+   - 2: Weak, flawed approach
+   - 1: Poor, incorrect approach
+   - 0: No understanding
 
-**Output Format (strictly follow this):**
-SCORE: <number 0-5>
-FEEDBACK: <one concise sentence explaining the score>
+2. **Sub-Scores (each 0-5):**
+   - Pattern Recognition
+   - Algorithmic Correctness
+   - Complexity Understanding
+   - Edge Case Awareness
 
-Example:
-SCORE: 4
-FEEDBACK: Correct identification of the two-pointer approach, but didn't mention the array must be sorted first.`,
-		questionTitle,
-		questionDescription,
-		correctApproach,
-		userAnswer,
-	)
+3. **Feedback:** 2-4 paragraphs covering what they got right, what they missed, and how to improve.
+
+4. **Solution Breakdown:** Complete step-by-step explanation with pattern, approach, pseudocode, complexity, insights, and common pitfalls.
+
+**CRITICAL: You must respond with ONLY valid JSON. No markdown, no backticks, no preamble. Just pure JSON.**
+
+**Output Format:**
+{
+  "score": <0-5>,
+  "sub_scores": {
+    "pattern_recognition": <0-5>,
+    "algorithmic_correctness": <0-5>,
+    "complexity_understanding": <0-5>,
+    "edge_case_awareness": <0-5>
+  },
+  "feedback": "<Multi-paragraph detailed feedback here>",
+  "solution": {
+    "pattern": "<Pattern name>",
+    "why_this_pattern": "<Explanation>",
+    "approach_steps": [
+      "<Step 1>",
+      "<Step 2>",
+      "<Step 3>"
+    ],
+    "pseudocode": "<Clean pseudocode here>",
+    "time_complexity": "<e.g., O(n)>",
+    "space_complexity": "<e.g., O(1)>",
+    "complexity_explanation": "<Why this complexity>",
+    "key_insights": [
+      "<Insight 1>",
+      "<Insight 2>"
+    ],
+    "common_pitfalls": [
+      "<Pitfall 1>",
+      "<Pitfall 2>"
+    ],
+    "correct_approach": "<1-2 sentence summary>"
+  }
+}`, questionTitle, questionDescription, userAnswer)
 }
 
-func (l *LLMService) parseResponse(response string) (int, string) {
-	lines := strings.Split(strings.TrimSpace(response), "\n")
+func (l *LLMService) parseJSONResponse(response string) (int, string, string, *models.SubScores, *models.SolutionBreakdown, error) {
+	// Clean up potential markdown formatting
+	cleaned := cleanJSONResponse(response)
 
-	score := 0
-	feedback := "Unable to parse feedback from AI."
-
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-
-		if strings.HasPrefix(line, "SCORE:") {
-			scoreStr := strings.TrimSpace(strings.TrimPrefix(line, "SCORE:"))
-			if s, err := strconv.Atoi(scoreStr); err == nil {
-				score = s
-			}
-		}
-
-		if strings.HasPrefix(line, "FEEDBACK:") {
-			feedback = strings.TrimSpace(strings.TrimPrefix(line, "FEEDBACK:"))
-		}
+	var llmResp LLMResponse
+	if err := json.Unmarshal([]byte(cleaned), &llmResp); err != nil {
+		return 0, "", "", nil, nil, fmt.Errorf("JSON unmarshal error: %w", err)
 	}
 
-	// Clamp score to valid range
+	// Validate and clamp scores
+	score := clampScore(llmResp.Score)
+
+	subScores := &models.SubScores{
+		PatternRecognition:      clampScore(llmResp.SubScores.PatternRecognition),
+		AlgorithmicCorrectness:  clampScore(llmResp.SubScores.AlgorithmicCorrectness),
+		ComplexityUnderstanding: clampScore(llmResp.SubScores.ComplexityUnderstanding),
+		EdgeCaseAwareness:       clampScore(llmResp.SubScores.EdgeCaseAwareness),
+	}
+
+	solutionBreakdown := &models.SolutionBreakdown{
+		Pattern:               llmResp.Solution.Pattern,
+		WhyThisPattern:        llmResp.Solution.WhyThisPattern,
+		ApproachSteps:         llmResp.Solution.ApproachSteps,
+		Pseudocode:            llmResp.Solution.Pseudocode,
+		TimeComplexity:        llmResp.Solution.TimeComplexity,
+		SpaceComplexity:       llmResp.Solution.SpaceComplexity,
+		ComplexityExplanation: llmResp.Solution.ComplexityExplanation,
+		KeyInsights:           llmResp.Solution.KeyInsights,
+		CommonPitfalls:        llmResp.Solution.CommonPitfalls,
+	}
+
+	// Ensure arrays are not nil
+	if solutionBreakdown.ApproachSteps == nil {
+		solutionBreakdown.ApproachSteps = []string{}
+	}
+	if solutionBreakdown.KeyInsights == nil {
+		solutionBreakdown.KeyInsights = []string{}
+	}
+	if solutionBreakdown.CommonPitfalls == nil {
+		solutionBreakdown.CommonPitfalls = []string{}
+	}
+
+	return score, llmResp.Feedback, llmResp.Solution.CorrectApproach, subScores, solutionBreakdown, nil
+}
+
+// cleanJSONResponse removes markdown code fences and extra whitespace
+func cleanJSONResponse(response string) string {
+	// Remove markdown JSON code fences if present
+	if len(response) > 7 && response[:7] == "```json" {
+		response = response[7:]
+	}
+	if len(response) > 3 && response[len(response)-3:] == "```" {
+		response = response[:len(response)-3]
+	}
+
+	// Trim whitespace
+	return response
+}
+
+// clampScore ensures scores are within 0-5 range
+func clampScore(score int) int {
 	if score < 0 {
-		score = 0
+		return 0
 	}
 	if score > 5 {
-		score = 5
+		return 5
 	}
-
-	return score, feedback
+	return score
 }
