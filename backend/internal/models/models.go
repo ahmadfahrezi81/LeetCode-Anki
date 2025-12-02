@@ -182,3 +182,22 @@ type ProgressSummary struct {
 	ByDifficulty map[string]DifficultyProgress `json:"by_difficulty"`
 	ByTopic      map[string]TopicProgress      `json:"by_topic"`
 }
+
+// History represents a saved submission attempt with LLM evaluation
+type History struct {
+	ID                string             `json:"id"`
+	UserID            string             `json:"user_id"`
+	QuestionID        string             `json:"question_id"`
+	UserAnswer        string             `json:"user_answer"`
+	SubmittedAt       time.Time          `json:"submitted_at"`
+	Score             int                `json:"score"`
+	Feedback          string             `json:"feedback"`
+	CorrectApproach   string             `json:"correct_approach"`
+	SubScores         *SubScores         `json:"sub_scores"`
+	SolutionBreakdown *SolutionBreakdown `json:"solution_breakdown"`
+	NextReviewAt      time.Time          `json:"next_review_at"`
+	CardState         string             `json:"card_state"`
+	IntervalMinutes   int                `json:"interval_minutes"`
+	IntervalDays      int                `json:"interval_days"`
+	CreatedAt         time.Time          `json:"created_at"`
+}

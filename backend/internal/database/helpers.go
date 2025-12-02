@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"leetcode-anki/backend/internal/models"
 	"strings"
@@ -439,4 +440,24 @@ func BuildFilterQuery(baseQuery string, filters map[string]interface{}) (string,
 	}
 
 	return baseQuery, args
+}
+
+// ============================================
+// JSON HELPERS FOR JSONB COLUMNS
+// ============================================
+
+// jsonMarshal converts a Go value to JSON bytes for JSONB storage
+func jsonMarshal(v interface{}) ([]byte, error) {
+	if v == nil {
+		return []byte("null"), nil
+	}
+	return json.Marshal(v)
+}
+
+// jsonUnmarshal converts JSON bytes from JSONB to a Go value
+func jsonUnmarshal(data []byte, v interface{}) error {
+	if len(data) == 0 || string(data) == "null" {
+		return nil
+	}
+	return json.Unmarshal(data, v)
 }

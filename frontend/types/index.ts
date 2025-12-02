@@ -133,3 +133,21 @@ export interface SubmitAnswerResponse {
   interval_days: number;
 }
 
+
+export interface History {
+  id: string;
+  user_id: string;
+  question_id: string;
+  user_answer: string;
+  submitted_at: string;
+  score: number;
+  feedback: string;
+  correct_approach: string;
+  sub_scores: SubScores;
+  solution_breakdown: SolutionBreakdown;
+  next_review_at: string;
+  card_state: string;
+  interval_minutes: number;
+  interval_days: number;
+  created_at: string;
+}

@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { DashboardData, Card, SubmitAnswerResponse } from "@/types";
+import type { DashboardData, Card, SubmitAnswerResponse, History } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -82,4 +82,8 @@ export const api = {
         ),
 
     getProblemStats: () => apiRequest("/api/admin/problem-stats"),
+
+    // History
+    getHistory: (limit = 20, offset = 0): Promise<{ data: History[]; limit: number; offset: number }> =>
+        apiRequest<{ data: History[]; limit: number; offset: number }>(`/api/history?limit=${limit}&offset=${offset}`),
 };

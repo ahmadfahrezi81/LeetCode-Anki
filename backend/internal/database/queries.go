@@ -544,3 +544,194 @@ func RefreshUserStats(userID string) error {
 	_, err := DB.Exec(query, userID)
 	return err
 }
+
+// ============================================
+// HISTORY FUNCTIONS
+// ============================================
+
+// CreateHistory saves a submission attempt to history
+func CreateHistory(history *models.History) error {
+	query := `
+		INSERT INTO history (
+			user_id, question_id, user_answer, submitted_at,
+			score, feedback, correct_approach,
+			sub_scores, solution_breakdown,
+			next_review_at, card_state, interval_minutes, interval_days
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		RETURNING id, created_at
+	`
+
+	// Convert SubScores and SolutionBreakdown to JSON
+	subScoresJSON, err := jsonMarshal(history.SubScores)
+	if err != nil {
+		return err
+	}
+
+	solutionBreakdownJSON, err := jsonMarshal(history.SolutionBreakdown)
+	if err != nil {
+		return err
+	}
+
+	return DB.QueryRow(
+		query,
+		history.UserID,
+		history.QuestionID,
+		history.UserAnswer,
+		history.SubmittedAt,
+		history.Score,
+		history.Feedback,
+		history.CorrectApproach,
+		subScoresJSON,
+		solutionBreakdownJSON,
+		history.NextReviewAt,
+		history.CardState,
+		history.IntervalMinutes,
+		history.IntervalDays,
+	).Scan(&history.ID, &history.CreatedAt)
+}
+
+// GetHistoryByUser retrieves all history for a user (paginated)
+func GetHistoryByUser(userID string, limit, offset int) ([]models.History, error) {
+	query := `
+		SELECT 
+			id, user_id, question_id, user_answer, submitted_at,
+			score, feedback, correct_approach,
+			sub_scores, solution_breakdown,
+			next_review_at, card_state, interval_minutes, interval_days,
+			created_at
+		FROM history
+		WHERE user_id = $1
+		ORDER BY submitted_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	rows, err := DB.Query(query, userID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var histories []models.History
+	for rows.Next() {
+		var h models.History
+		var subScoresJSON, solutionBreakdownJSON []byte
+
+		err := rows.Scan(
+			&h.ID, &h.UserID, &h.QuestionID, &h.UserAnswer, &h.SubmittedAt,
+			&h.Score, &h.Feedback, &h.CorrectApproach,
+			&subScoresJSON, &solutionBreakdownJSON,
+			&h.NextReviewAt, &h.CardState, &h.IntervalMinutes, &h.IntervalDays,
+			&h.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Unmarshal JSON fields
+		if err := jsonUnmarshal(subScoresJSON, &h.SubScores); err != nil {
+			return nil, err
+		}
+		if err := jsonUnmarshal(solutionBreakdownJSON, &h.SolutionBreakdown); err != nil {
+			return nil, err
+		}
+
+		histories = append(histories, h)
+	}
+
+	return histories, rows.Err()
+}
+
+// GetHistoryByQuestion retrieves all attempts for a specific question by a user
+func GetHistoryByQuestion(userID, questionID string) ([]models.History, error) {
+	query := `
+		SELECT 
+			id, user_id, question_id, user_answer, submitted_at,
+			score, feedback, correct_approach,
+			sub_scores, solution_breakdown,
+			next_review_at, card_state, interval_minutes, interval_days,
+			created_at
+		FROM history
+		WHERE user_id = $1 AND question_id = $2
+		ORDER BY submitted_at DESC
+	`
+
+	rows, err := DB.Query(query, userID, questionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var histories []models.History
+	for rows.Next() {
+		var h models.History
+		var subScoresJSON, solutionBreakdownJSON []byte
+
+		err := rows.Scan(
+			&h.ID, &h.UserID, &h.QuestionID, &h.UserAnswer, &h.SubmittedAt,
+			&h.Score, &h.Feedback, &h.CorrectApproach,
+			&subScoresJSON, &solutionBreakdownJSON,
+			&h.NextReviewAt, &h.CardState, &h.IntervalMinutes, &h.IntervalDays,
+			&h.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Unmarshal JSON fields
+		if err := jsonUnmarshal(subScoresJSON, &h.SubScores); err != nil {
+			return nil, err
+		}
+		if err := jsonUnmarshal(solutionBreakdownJSON, &h.SolutionBreakdown); err != nil {
+			return nil, err
+		}
+
+		histories = append(histories, h)
+	}
+
+	return histories, rows.Err()
+}
+
+// GetLatestAttempt retrieves the most recent attempt for a question
+func GetLatestAttempt(userID, questionID string) (*models.History, error) {
+	query := `
+		SELECT 
+			id, user_id, question_id, user_answer, submitted_at,
+			score, feedback, correct_approach,
+			sub_scores, solution_breakdown,
+			next_review_at, card_state, interval_minutes, interval_days,
+			created_at
+		FROM history
+		WHERE user_id = $1 AND question_id = $2
+		ORDER BY submitted_at DESC
+		LIMIT 1
+	`
+
+	var h models.History
+	var subScoresJSON, solutionBreakdownJSON []byte
+
+	err := DB.QueryRow(query, userID, questionID).Scan(
+		&h.ID, &h.UserID, &h.QuestionID, &h.UserAnswer, &h.SubmittedAt,
+		&h.Score, &h.Feedback, &h.CorrectApproach,
+		&subScoresJSON, &solutionBreakdownJSON,
+		&h.NextReviewAt, &h.CardState, &h.IntervalMinutes, &h.IntervalDays,
+		&h.CreatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal JSON fields
+	if err := jsonUnmarshal(subScoresJSON, &h.SubScores); err != nil {
+		return nil, err
+	}
+	if err := jsonUnmarshal(solutionBreakdownJSON, &h.SolutionBreakdown); err != nil {
+		return nil, err
+	}
+
+	return &h, nil
+}

@@ -26,6 +26,7 @@ import {
     Flame
 } from "lucide-react";
 import { motion } from "framer-motion";
+import HistoryTable from "@/components/HistoryTable";
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -274,6 +275,11 @@ export default function DashboardPage() {
                             </motion.div>
                         ))}
                     </div>
+                </div>
+
+                {/* History Section */}
+                <div>
+                    <HistoryTable />
                 </div>
             </div>
         </div>

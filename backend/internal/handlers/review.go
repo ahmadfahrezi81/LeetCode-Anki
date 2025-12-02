@@ -217,6 +217,31 @@ func (h *ReviewHandler) SubmitAnswer(c *gin.Context) {
 		return
 	}
 
+	// Save to history
+	history := &models.History{
+		UserID:            userID,
+		QuestionID:        req.QuestionID,
+		UserAnswer:        req.Answer,
+		SubmittedAt:       time.Now(),
+		Score:             score,
+		Feedback:          feedback,
+		CorrectApproach:   correctApproach,
+		SubScores:         subScores,
+		SolutionBreakdown: solutionBreakdown,
+		NextReviewAt:      review.NextReviewAt,
+		CardState:         review.CardState,
+		IntervalMinutes:   review.IntervalMinutes,
+		IntervalDays:      review.IntervalDays,
+	}
+
+	err = database.CreateHistory(history)
+	if err != nil {
+		// Log error but don't fail the request
+		log.Printf("⚠️ Failed to save history: %v", err)
+	} else {
+		log.Printf("✅ History saved successfully: ID=%s", history.ID)
+	}
+
 	// Refresh user stats
 	_ = database.RefreshUserStats(userID)
 
