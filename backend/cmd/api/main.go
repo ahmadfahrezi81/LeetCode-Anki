@@ -66,6 +66,7 @@ func main() {
 		// Study session
 		api.GET("/card/next", reviewHandler.GetNextCard)
 		api.POST("/review/submit", reviewHandler.SubmitAnswer)
+		api.POST("/review/skip", reviewHandler.SkipCard)
 
 		// Admin endpoints (optional: add auth check)
 		api.POST("/admin/refresh-problems", adminHandler.RefreshProblems)

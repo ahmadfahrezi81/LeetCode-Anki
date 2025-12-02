@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Children, cloneElement, isValidElement } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { api } from "@/lib/api";
@@ -29,8 +29,13 @@ import {
     Target,
     BookOpen,
     Lightbulb,
+    SkipForward,
+    Clock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 
 export default function StudyPage() {
     const router = useRouter();
@@ -40,19 +45,28 @@ export default function StudyPage() {
     const [submitting, setSubmitting] = useState(false);
     const [result, setResult] = useState<SubmitAnswerResponse | null>(null);
     const [showResult, setShowResult] = useState(false);
+    const [skipping, setSkipping] = useState(false);
 
     useEffect(() => {
-        checkAuth();
-    }, []);
+        let ignore = false;
 
-    const checkAuth = async () => {
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) {
-            router.push("/login");
-            return;
-        }
-        loadCard();
-    };
+        const checkAuth = async () => {
+            const { data } = await supabase.auth.getSession();
+            if (ignore) return;
+
+            if (!data.session) {
+                router.push("/login");
+                return;
+            }
+            loadCard();
+        };
+
+        checkAuth();
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
 
     const loadCard = async () => {
         try {
@@ -86,6 +100,29 @@ export default function StudyPage() {
         }
     };
 
+    const handleSkip = async () => {
+        if (!card) return;
+
+        const confirmed = window.confirm(
+            "Skip this card? It will be reset to the first learning step (10 minutes)."
+        );
+
+        if (!confirmed) return;
+
+        setSkipping(true);
+        try {
+            await api.skipCard(card.question.id);
+            // Load next card
+            setAnswer("");
+            loadCard();
+        } catch (err) {
+            console.error("Failed to skip card:", err);
+            alert("Failed to skip card. Please try again.");
+        } finally {
+            setSkipping(false);
+        }
+    };
+
     const handleNext = () => {
         setAnswer("");
         setResult(null);
@@ -93,17 +130,18 @@ export default function StudyPage() {
         loadCard();
     };
 
+
     if (loading) {
         return (
-            <div className="flex min-h-screen items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            <div className="flex min-h-screen items-center justify-center bg-gray-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
             </div>
         );
     }
 
     if (!card) {
         return (
-            <div className="flex min-h-screen items-center justify-center">
+            <div className="flex min-h-screen items-center justify-center bg-gray-50">
                 <Card className="max-w-md">
                     <CardHeader>
                         <CardTitle>No Cards Available</CardTitle>
@@ -123,9 +161,9 @@ export default function StudyPage() {
     }
 
     const difficultyColors = {
-        Easy: "bg-green-500 text-white",
-        Medium: "bg-yellow-500 text-white",
-        Hard: "bg-red-500 text-white",
+        Easy: "bg-green-100 text-green-800 border border-green-300",
+        Medium: "bg-yellow-100 text-yellow-800 border border-yellow-300",
+        Hard: "bg-red-100 text-red-800 border border-red-300",
     };
 
     const getScoreColor = (score: number) => {
@@ -134,8 +172,38 @@ export default function StudyPage() {
         return "text-red-600";
     };
 
+    // Format interval for display
+    const formatInterval = (intervalMinutes: number, cardState: string) => {
+        if (cardState === "learning" || cardState === "relearning") {
+            if (intervalMinutes < 60) {
+                return `${intervalMinutes} minute${intervalMinutes !== 1 ? "s" : ""}`;
+            } else if (intervalMinutes < 1440) {
+                const hours = Math.round(intervalMinutes / 60);
+                return `${hours} hour${hours !== 1 ? "s" : ""}`;
+            } else {
+                const days = Math.round(intervalMinutes / 1440);
+                return `${days} day${days !== 1 ? "s" : ""}`;
+            }
+        }
+        return null; // Use date for review cards
+    };
+
+    // Get learning progress
+    const getLearningProgress = () => {
+        if (card.review.card_state === "learning" || card.review.card_state === "relearning") {
+            const step = card.review.current_step || 0;
+            const totalSteps = 4;
+            const percentage = ((step + 1) / totalSteps) * 100;
+            return { step: step + 1, totalSteps, percentage };
+        }
+        return null;
+    };
+
+    const learningProgress = getLearningProgress();
+
+
     return (
-        <div className="min-h-screen p-4 md:p-8">
+        <div className="min-h-screen bg-gray-50 p-4 md:p-8">
             <div className="mx-auto max-w-4xl">
                 {/* Header */}
                 <div className="mb-6 flex items-center justify-between">
@@ -144,10 +212,10 @@ export default function StudyPage() {
                         Dashboard
                     </Button>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-sm text-gray-600">
                             Card State:
                         </span>
-                        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                        <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800 border border-blue-300">
                             {card.review.card_state.charAt(0).toUpperCase() +
                                 card.review.card_state.slice(1)}
                         </span>
@@ -162,7 +230,7 @@ export default function StudyPage() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                     >
-                        <Card className="mb-6">
+                        <Card className="mb-6 bg-white shadow-sm">
                             <CardHeader>
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
@@ -180,63 +248,195 @@ export default function StudyPage() {
                                                 (topic) => (
                                                     <span
                                                         key={topic}
-                                                        className="rounded-full bg-secondary px-3 py-1 text-xs font-medium"
+                                                        className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 border border-gray-300"
                                                     >
                                                         {topic}
                                                     </span>
                                                 )
                                             )}
                                         </div>
-                                        <CardTitle className="text-2xl">
+                                        <CardTitle className="text-2xl text-gray-900">
                                             {card.question.title}
                                         </CardTitle>
                                     </div>
-                                    <BookOpen className="h-6 w-6 text-muted-foreground" />
+                                    <BookOpen className="h-6 w-6 text-gray-400" />
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="prose prose-sm dark:prose-invert max-w-none">
-                                    <div className="whitespace-pre-wrap rounded-lg bg-secondary/50 p-4 text-sm">
+                                <div className="text-gray-700 leading-relaxed">
+                                    <ReactMarkdown 
+                                        remarkPlugins={[remarkGfm]}
+                                        components={{
+                                            pre: ({ children }) => {
+                                                // Check if this is an example block (contains Input/Output)
+                                                const codeElement = Children.toArray(children).find(
+                                                    (child) => isValidElement(child) && child.type === "code"
+                                                ) as React.ReactElement<{ children: React.ReactNode }> | undefined;
+
+                                                if (codeElement && codeElement.props.children) {
+                                                    const text = String(codeElement.props.children);
+                                                    // Check for LeetCode example pattern
+                                                    if (text.includes("Input:") && text.includes("Output:")) {
+                                                        // Parse the example text
+                                                        const parts = text.split(/(Input:|Output:|Explanation:)/).filter(Boolean);
+                                                        const items = [];
+                                                        for (let i = 0; i < parts.length; i += 2) {
+                                                            if (i + 1 < parts.length) {
+                                                                items.push({
+                                                                    label: parts[i].replace(":", ""),
+                                                                    value: parts[i + 1].trim()
+                                                                });
+                                                            }
+                                                        }
+
+                                                        return (
+                                                            <div className="my-4 rounded-lg bg-gray-50 p-4 border border-gray-200 text-sm">
+                                                                {items.map((item, index) => (
+                                                                    <div key={index} className="mb-1 last:mb-0">
+                                                                        <span className="font-semibold text-gray-900">{item.label}:</span>{" "}
+                                                                        <span className="text-gray-700 font-mono">{item.value}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        );
+                                                    }
+                                                }
+
+                                                return (
+                                                    <div className="relative my-4">
+                                                        <pre className="bg-gray-100 text-gray-800 p-4 rounded-lg overflow-x-auto border border-gray-300 whitespace-pre-wrap">
+                                                            {Children.map(children, (child) =>
+                                                                isValidElement(child)
+                                                                    ? cloneElement(child as React.ReactElement, { isBlock: true } as any)
+                                                                    : child
+                                                            )}
+                                                        </pre>
+                                                    </div>
+                                                );
+                                            },
+                                            code: ({ className, children, isBlock, ...props }: any) => {
+                                                const match = /language-(\w+)/.exec(className || "");
+                                                const isInline = !match && !className && !isBlock;
+
+                                                if (isInline) {
+                                                    return (
+                                                        <code
+                                                            className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-[0.9em] font-mono border border-gray-200 whitespace-nowrap"
+                                                            {...props}
+                                                        >
+                                                            {children}
+                                                        </code>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <code className={className} {...props}>
+                                                        {children}
+                                                    </code>
+                                                );
+                                            },
+                                            p: ({children}) => <p className="mb-4 leading-7">{children}</p>,
+                                            ul: ({children}) => <ul className="list-disc pl-6 mb-4 space-y-1">{children}</ul>,
+                                            ol: ({children}) => <ol className="list-decimal pl-6 mb-4 space-y-1">{children}</ol>,
+                                            li: ({children}) => <li className="pl-1">{children}</li>,
+                                            h1: ({children}) => <h1 className="text-2xl font-bold mb-4 mt-6 text-gray-900">{children}</h1>,
+                                            h2: ({children}) => <h2 className="text-xl font-semibold mb-3 mt-5 text-gray-900">{children}</h2>,
+                                            h3: ({children}) => <h3 className="text-lg font-semibold mb-2 mt-4 text-gray-900">{children}</h3>,
+                                            blockquote: ({children}) => <blockquote className="border-l-4 border-blue-400 pl-4 italic my-4 text-gray-600 bg-gray-50 py-2 pr-2 rounded-r">{children}</blockquote>,
+                                            strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                                            a: ({children, href}) => <a href={href} className="text-blue-600 hover:underline underline-offset-4" target="_blank" rel="noopener noreferrer">{children}</a>,
+                                            table: ({children}) => <div className="overflow-x-auto my-4 rounded-lg border border-gray-300"><table className="w-full text-sm text-left bg-white">{children}</table></div>,
+                                            thead: ({children}) => <thead className="bg-gray-100 text-gray-700 uppercase">{children}</thead>,
+                                            tbody: ({children}) => <tbody className="divide-y divide-gray-200">{children}</tbody>,
+                                            tr: ({children}) => <tr className="bg-white hover:bg-gray-50 transition-colors">{children}</tr>,
+                                            th: ({children}) => <th className="px-4 py-3 font-medium">{children}</th>,
+                                            td: ({children}) => <td className="px-4 py-3">{children}</td>,
+                                            img: ({src, alt}) => <img src={src} alt={alt || ''} className="max-w-full h-auto rounded-lg my-4" />,
+                                        }}
+                                    >
                                         {card.question.description_markdown}
-                                    </div>
+                                    </ReactMarkdown>
                                 </div>
                             </CardContent>
                         </Card>
 
                         {/* Answer Input */}
-                        <Card>
+                        <Card className="bg-white shadow-sm">
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Lightbulb className="h-5 w-5" />
+                                <CardTitle className="flex items-center gap-2 text-gray-900">
+                                    <Lightbulb className="h-5 w-5 text-yellow-500" />
                                     Explain Your Approach
                                 </CardTitle>
-                                <CardDescription>
+                                <CardDescription className="text-gray-600">
                                     Describe the algorithm and data structures
                                     you would use to solve this problem
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
+                                {/* Learning Progress */}
+                                {learningProgress && (
+                                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                        <div className="mb-2 flex items-center justify-between text-sm">
+                                            <span className="font-medium text-gray-900">
+                                                Learning Progress
+                                            </span>
+                                            <span className="text-gray-600">
+                                                Step {learningProgress.step}/
+                                                {learningProgress.totalSteps}
+                                            </span>
+                                        </div>
+                                        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                                            <div
+                                                className="h-full bg-blue-600 transition-all duration-300"
+                                                style={{
+                                                    width: `${learningProgress.percentage}%`,
+                                                }}
+                                            />
+                                        </div>
+                                        <p className="mt-2 text-xs text-gray-600">
+                                            10min → 1hr → 6hr → 1day
+                                        </p>
+                                    </div>
+                                )}
+
                                 <Textarea
                                     placeholder="Example: I would use a hashmap to store complements. For each number, I check if target minus the current number exists in the map..."
                                     value={answer}
                                     onChange={(e) => setAnswer(e.target.value)}
                                     rows={8}
-                                    className="resize-none"
+                                    className="resize-none bg-white border-gray-300"
                                 />
-                                <Button
-                                    onClick={handleSubmit}
-                                    disabled={submitting || !answer.trim()}
-                                    className="w-full"
-                                >
-                                    {submitting ? (
-                                        <>Processing...</>
-                                    ) : (
-                                        <>
-                                            <Send className="mr-2 h-4 w-4" />
-                                            Submit Answer
-                                        </>
-                                    )}
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleSkip}
+                                        disabled={skipping || submitting}
+                                        className="flex-1"
+                                    >
+                                        {skipping ? (
+                                            <>Processing...</>
+                                        ) : (
+                                            <>
+                                                <SkipForward className="mr-2 h-4 w-4" />
+                                                Skip Card
+                                            </>
+                                        )}
+                                    </Button>
+                                    <Button
+                                        onClick={handleSubmit}
+                                        disabled={submitting || !answer.trim() || skipping}
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                        {submitting ? (
+                                            <>Processing...</>
+                                        ) : (
+                                            <>
+                                                <Send className="mr-2 h-4 w-4" />
+                                                Submit Answer
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
                             </CardContent>
                         </Card>
                     </motion.div>
@@ -244,9 +444,9 @@ export default function StudyPage() {
 
                 {/* Result Modal */}
                 <Dialog open={showResult} onOpenChange={setShowResult}>
-                    <DialogContent className="sm:max-w-xl">
+                    <DialogContent className="sm:max-w-xl bg-white">
                         <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
+                            <DialogTitle className="flex items-center gap-2 text-gray-900">
                                 <Trophy className="h-6 w-6 text-yellow-500" />
                                 Your Result
                             </DialogTitle>
@@ -254,8 +454,8 @@ export default function StudyPage() {
                         {result && (
                             <div className="space-y-4">
                                 {/* Score */}
-                                <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-6 text-center">
-                                    <p className="mb-2 text-sm text-muted-foreground">
+                                <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-6 text-center">
+                                    <p className="mb-2 text-sm text-gray-600">
                                         Score
                                     </p>
                                     <p
@@ -268,41 +468,71 @@ export default function StudyPage() {
                                 </div>
 
                                 {/* Feedback */}
-                                <div className="rounded-lg bg-secondary/50 p-4">
-                                    <p className="mb-1 text-sm font-medium">
+                                <div className="rounded-lg bg-gray-50 p-4 border border-gray-200">
+                                    <p className="mb-1 text-sm font-medium text-gray-900">
                                         Feedback
                                     </p>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm text-gray-700">
                                         {result.feedback}
                                     </p>
                                 </div>
 
                                 {/* Correct Approach */}
-                                <div className="rounded-lg bg-secondary/50 p-4">
-                                    <p className="mb-1 text-sm font-medium">
+                                <div className="rounded-lg bg-gray-50 p-4 border border-gray-200">
+                                    <p className="mb-1 text-sm font-medium text-gray-900">
                                         Correct Approach
                                     </p>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm text-gray-700">
                                         {result.correct_approach}
                                     </p>
                                 </div>
 
                                 {/* Next Review */}
-                                <div className="flex items-center justify-between rounded-lg border p-4">
+                                <div className="flex items-center justify-between rounded-lg border border-gray-300 bg-white p-4">
                                     <div className="flex items-center gap-2">
-                                        <Target className="h-5 w-5 text-muted-foreground" />
-                                        <span className="text-sm">
-                                            Next Review
-                                        </span>
+                                        {(result.card_state === "learning" ||
+                                            result.card_state === "relearning") && (
+                                            <Clock className="h-5 w-5 text-gray-500" />
+                                        )}
+                                        {(result.card_state === "review" ||
+                                            result.card_state === "new") && (
+                                            <Target className="h-5 w-5 text-gray-500" />
+                                        )}
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">
+                                                Next Review
+                                            </p>
+                                            <p className="text-xs text-gray-600">
+                                                {result.card_state
+                                                    .charAt(0)
+                                                    .toUpperCase() +
+                                                    result.card_state.slice(1)}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <span className="text-sm font-medium">
-                                        {new Date(
-                                            result.next_review_at
-                                        ).toLocaleDateString()}
-                                    </span>
+                                    <div className="text-right">
+                                        {card && formatInterval(
+                                            card.review.interval_minutes,
+                                            result.card_state
+                                        ) ? (
+                                            <span className="text-sm font-medium text-gray-900">
+                                                in{" "}
+                                                {formatInterval(
+                                                    card.review.interval_minutes,
+                                                    result.card_state
+                                                )}
+                                            </span>
+                                        ) : (
+                                            <span className="text-sm font-medium text-gray-900">
+                                                {new Date(
+                                                    result.next_review_at
+                                                ).toLocaleDateString()}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
-                                <Button onClick={handleNext} className="w-full">
+                                <Button onClick={handleNext} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                                     <Brain className="mr-2 h-4 w-4" />
                                     Next Card
                                 </Button>

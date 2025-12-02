@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"leetcode-anki/backend/config"
 	"leetcode-anki/backend/internal/database"
 	"leetcode-anki/backend/internal/models"
 	"leetcode-anki/backend/internal/services"
@@ -26,26 +27,68 @@ func NewReviewHandler() *ReviewHandler {
 	}
 }
 
-// GetNextCard retrieves the next card for study (review or new)
+// GetNextCard retrieves the next card following Anki's priority order
+// Priority: 1. Learning cards -> 2. Review cards -> 3. New cards (with daily limit)
 func (h *ReviewHandler) GetNextCard(c *gin.Context) {
 	userID := c.GetString("user_id")
 
-	// First, check for due reviews
-	card, err := database.GetNextCard(userID)
+	// Get due counts for response
+	dueCounts, err := database.GetDueCountsByType(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch due counts"})
+		return
+	}
+
+	// PRIORITY 1: Learning/Relearning cards (due now)
+	card, err := database.GetNextLearningCard(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch learning card"})
+		return
+	}
+
+	if card != nil {
+		c.JSON(http.StatusOK, models.NextCardResponse{
+			Card:      card,
+			Type:      "learning",
+			Message:   "Continue learning this card",
+			DueCounts: *dueCounts,
+		})
+		return
+	}
+
+	// PRIORITY 2: Review cards (due today)
+	card, err = database.GetNextReviewCard(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch review card"})
 		return
 	}
 
 	if card != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"card": card,
-			"type": "review",
+		c.JSON(http.StatusOK, models.NextCardResponse{
+			Card:      card,
+			Type:      "review",
+			Message:   "Review this card",
+			DueCounts: *dueCounts,
 		})
 		return
 	}
 
-	// No reviews due, get a new card
+	// PRIORITY 3: New cards (check daily limit)
+	newCardsLimit := config.AppConfig.NewCardsPerDay // Default: 20
+	if dueCounts.NewStudiedToday >= newCardsLimit {
+		// Daily limit reached
+		nextCardTime, _ := database.GetNextDueCardTime(userID)
+		c.JSON(http.StatusOK, models.NextCardResponse{
+			Card:          nil,
+			Type:          "",
+			Message:       fmt.Sprintf("Daily new card limit reached (%d/%d). Great work!", dueCounts.NewStudiedToday, newCardsLimit),
+			NextCardDueAt: nextCardTime,
+			DueCounts:     *dueCounts,
+		})
+		return
+	}
+
+	// Get a new card
 	question, err := database.GetNewCard(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch new card"})
@@ -53,10 +96,31 @@ func (h *ReviewHandler) GetNextCard(c *gin.Context) {
 	}
 
 	if question == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "No cards available. Check back later!",
-			"card":    nil,
-		})
+		// No new cards available - check when next card is due
+		nextCardTime, _ := database.GetNextDueCardTime(userID)
+
+		if nextCardTime == nil {
+			// All cards studied!
+			c.JSON(http.StatusOK, models.NextCardResponse{
+				Card:          nil,
+				Type:          "",
+				Message:       "🎉 Congratulations! You've studied all available cards. No more reviews due today!",
+				NextCardDueAt: nil,
+				DueCounts:     *dueCounts,
+			})
+		} else {
+			// Cards coming up later
+			timeUntil := time.Until(*nextCardTime)
+			message := fmt.Sprintf("No cards due right now. Next card in %s", formatDuration(timeUntil))
+
+			c.JSON(http.StatusOK, models.NextCardResponse{
+				Card:          nil,
+				Type:          "",
+				Message:       message,
+				NextCardDueAt: nextCardTime,
+				DueCounts:     *dueCounts,
+			})
+		}
 		return
 	}
 
@@ -74,12 +138,18 @@ func (h *ReviewHandler) GetNextCard(c *gin.Context) {
 	// Refresh user stats
 	_ = database.RefreshUserStats(userID)
 
-	c.JSON(http.StatusOK, gin.H{
-		"card": models.Card{
+	// Update due counts after creating new card
+	dueCounts.NewStudiedToday++
+	dueCounts.NewAvailable--
+
+	c.JSON(http.StatusOK, models.NextCardResponse{
+		Card: &models.Card{
 			Question: *question,
 			Review:   *review,
 		},
-		"type": "new",
+		Type:      "new",
+		Message:   "New card to learn",
+		DueCounts: *dueCounts,
 	})
 }
 
@@ -142,13 +212,60 @@ func (h *ReviewHandler) SubmitAnswer(c *gin.Context) {
 	// Refresh user stats
 	_ = database.RefreshUserStats(userID)
 
-	// Return response
+	// Return response with enhanced info
 	c.JSON(http.StatusOK, models.SubmitAnswerResponse{
 		Score:           score,
 		Feedback:        feedback,
 		CorrectApproach: question.CorrectApproach,
 		NextReviewAt:    review.NextReviewAt,
 		CardState:       review.CardState,
+		IntervalMinutes: review.IntervalMinutes,
+		IntervalDays:    review.IntervalDays,
+	})
+}
+
+// SkipCard handles skipping a card (treats as "Again" - failed)
+func (h *ReviewHandler) SkipCard(c *gin.Context) {
+	userID := c.GetString("user_id")
+
+	var req models.SkipRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	// Get review record
+	review, err := database.GetReview(userID, req.QuestionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch review"})
+		return
+	}
+
+	if review == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Review not found. Get the card first."})
+		return
+	}
+
+	// Treat skip as "Again" (score 0 = failed)
+	h.srsService.CalculateNextReview(review, 0)
+
+	// Save updated review
+	err = database.UpdateReview(review)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update review"})
+		return
+	}
+
+	// Refresh user stats
+	_ = database.RefreshUserStats(userID)
+
+	// Return response
+	c.JSON(http.StatusOK, gin.H{
+		"message":          "Card skipped and marked as 'Again'",
+		"next_review_at":   review.NextReviewAt,
+		"card_state":       review.CardState,
+		"interval_minutes": review.IntervalMinutes,
+		"interval_days":    review.IntervalDays,
 	})
 }
 
@@ -174,7 +291,6 @@ func (h *ReviewHandler) checkAndRefreshProblems(userID string) {
 
 // insertProblem helper to insert a LeetCode problem
 func (h *ReviewHandler) insertProblem(problem *services.LeetCodeProblem) error {
-	// This is duplicated from seed/main.go - could be refactored to a shared function
 	topics := make([]string, len(problem.TopicTags))
 	for i, tag := range problem.TopicTags {
 		topics[i] = tag.Name
@@ -190,7 +306,11 @@ func (h *ReviewHandler) insertProblem(problem *services.LeetCodeProblem) error {
 		INSERT INTO questions 
 		(leetcode_id, title, slug, difficulty, description_markdown, topics, correct_approach)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		ON CONFLICT (leetcode_id) DO NOTHING
+		ON CONFLICT (leetcode_id) 
+		DO UPDATE SET 
+			description_markdown = EXCLUDED.description_markdown,
+			correct_approach = EXCLUDED.correct_approach,
+			topics = EXCLUDED.topics
 	`
 
 	_, err := database.DB.Exec(
@@ -205,4 +325,30 @@ func (h *ReviewHandler) insertProblem(problem *services.LeetCodeProblem) error {
 	)
 
 	return err
+}
+
+// Helper function to format duration nicely
+func formatDuration(d time.Duration) string {
+	if d < time.Minute {
+		return "less than a minute"
+	}
+	if d < time.Hour {
+		mins := int(d.Minutes())
+		if mins == 1 {
+			return "1 minute"
+		}
+		return fmt.Sprintf("%d minutes", mins)
+	}
+	if d < 24*time.Hour {
+		hours := int(d.Hours())
+		if hours == 1 {
+			return "1 hour"
+		}
+		return fmt.Sprintf("%d hours", hours)
+	}
+	days := int(d.Hours() / 24)
+	if days == 1 {
+		return "1 day"
+	}
+	return fmt.Sprintf("%d days", days)
 }

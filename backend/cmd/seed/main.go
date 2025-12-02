@@ -96,6 +96,11 @@ func insertProblem(problem *services.LeetCodeProblem) error {
 		INSERT INTO questions 
 		(leetcode_id, title, slug, difficulty, description_markdown, topics, correct_approach)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (leetcode_id) 
+		DO UPDATE SET 
+			description_markdown = EXCLUDED.description_markdown,
+			correct_approach = EXCLUDED.correct_approach,
+			topics = EXCLUDED.topics
 		RETURNING id
 	`
 

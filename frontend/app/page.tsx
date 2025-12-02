@@ -20,6 +20,10 @@ import {
     TrendingUp,
     Clock,
     LogOut,
+    Zap,
+    CheckCircle2,
+    Timer,
+    Flame
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -59,152 +63,218 @@ export default function DashboardPage() {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            <div className="flex min-h-screen items-center justify-center bg-gray-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
             </div>
         );
     }
 
     if (!dashboard) {
         return (
-            <div className="flex min-h-screen items-center justify-center">
-                <p className="text-muted-foreground">
-                    Failed to load dashboard
-                </p>
+            <div className="flex min-h-screen items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <p className="text-gray-500 mb-4">Failed to load dashboard</p>
+                    <Button onClick={() => window.location.reload()}>Retry</Button>
+                </div>
             </div>
         );
     }
 
+    const totalDue = dashboard.due_counts.reviews_due + dashboard.due_counts.learning_due;
+    const hasCardsAvailable = totalDue > 0 || dashboard.due_counts.new_available > 0;
+    const isReviewMode = totalDue > 0;
+
     const stats = [
         {
-            label: "Total Cards",
+            label: "Total",
             value: dashboard.stats.total_cards,
             icon: BookOpen,
-            color: "bg-blue-500",
+            color: "text-blue-600",
+            bg: "bg-blue-100",
         },
         {
             label: "New",
             value: dashboard.stats.new_cards,
             icon: Target,
-            color: "bg-green-500",
+            color: "text-green-600",
+            bg: "bg-green-100",
         },
         {
             label: "Learning",
             value: dashboard.stats.learning_cards,
             icon: TrendingUp,
-            color: "bg-yellow-500",
+            color: "text-yellow-600",
+            bg: "bg-yellow-100",
         },
         {
             label: "Review",
             value: dashboard.stats.review_cards,
             icon: Clock,
-            color: "bg-orange-500",
+            color: "text-orange-600",
+            bg: "bg-orange-100",
         },
         {
             label: "Mature",
             value: dashboard.stats.mature_cards,
             icon: Brain,
-            color: "bg-purple-500",
+            color: "text-purple-600",
+            bg: "bg-purple-100",
         },
     ];
 
     return (
-        <div className="min-h-screen p-4 md:p-8">
-            <div className="mx-auto max-w-6xl">
-                {/* Header */}
-                <div className="mb-8 flex items-center justify-between">
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-3"
-                    >
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-                            <Brain className="h-6 w-6 text-primary-foreground" />
+        <div className="min-h-screen bg-gray-50 pb-20 md:pb-8">
+            {/* Mobile Header */}
+            <div className="bg-white border-b sticky top-0 z-50 md:hidden">
+                <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-blue-600 p-1.5 rounded-lg">
+                            <Brain className="h-5 w-5 text-white" />
+                        </div>
+                        <span className="font-bold text-lg text-gray-900">LeetAnki</span>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={handleLogout}>
+                        <LogOut className="h-5 w-5 text-gray-500" />
+                    </Button>
+                </div>
+            </div>
+
+            <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-6 md:space-y-8">
+                {/* Desktop Header */}
+                <div className="hidden md:flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-200">
+                            <Brain className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">
-                                LeetCode Anki
-                            </h1>
-                            <p className="text-sm text-muted-foreground">
-                                Master algorithms with spaced repetition
-                            </p>
+                            <h1 className="text-2xl font-bold text-gray-900">LeetCode Anki</h1>
+                            <p className="text-sm text-gray-500">Master algorithms efficiently</p>
                         </div>
-                    </motion.div>
-                    <Button variant="ghost" onClick={handleLogout}>
-                        <LogOut className="mr-2 h-4 w-4" />
+                    </div>
+                    <Button variant="outline" onClick={handleLogout} className="gap-2">
+                        <LogOut className="h-4 w-4" />
                         Logout
                     </Button>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="mb-8 grid gap-4 md:grid-cols-5">
-                    {stats.map((stat, index) => (
-                        <motion.div
-                            key={stat.label}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                        >
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">
-                                        {stat.label}
-                                    </CardTitle>
-                                    <div
-                                        className={`${stat.color} rounded-full p-2`}
-                                    >
-                                        <stat.icon className="h-4 w-4 text-white" />
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">
-                                        {stat.value}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-                    ))}
-                </div>
-
-                {/* Study Card */}
+                {/* Hero / Action Section */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
+                    className="grid gap-6 md:grid-cols-2"
                 >
-                    <Card className="border-2">
-                        <CardHeader>
-                            <CardTitle className="text-2xl">
-                                Ready to Study?
+                    {/* Main Action Card */}
+                    <Card className={`border-0 shadow-lg overflow-hidden relative ${
+                        isReviewMode 
+                            ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white" 
+                            : "bg-white text-gray-900"
+                    }`}>
+                        <div className="absolute top-0 right-0 p-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+                        
+                        <CardHeader className="relative z-10 pb-2">
+                            <CardTitle className="flex items-center gap-2 text-lg font-medium opacity-90">
+                                <Zap className={`h-5 w-5 ${isReviewMode ? "text-yellow-300" : "text-yellow-500"}`} />
+                                {isReviewMode ? "Review Session" : "Study Session"}
                             </CardTitle>
-                            <CardDescription>
-                                {dashboard.due_reviews > 0
-                                    ? `You have ${dashboard.due_reviews} card${
-                                          dashboard.due_reviews === 1 ? "" : "s"
-                                      } due for review`
-                                    : dashboard.available_new_card
-                                    ? "Learn a new algorithm problem"
-                                    : "No cards available right now. Check back later!"}
-                            </CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <Button
-                                size="lg"
-                                className="w-full md:w-auto"
+                        
+                        <CardContent className="relative z-10 space-y-6">
+                            <div>
+                                <div className="text-5xl font-bold tracking-tight mb-1">
+                                    {totalDue > 0 ? totalDue : dashboard.due_counts.new_available}
+                                </div>
+                                <p className={`text-sm font-medium ${isReviewMode ? "text-blue-100" : "text-gray-500"}`}>
+                                    {totalDue > 0 ? "Cards due for review" : "New cards available"}
+                                </p>
+                            </div>
+
+                            {!isReviewMode && dashboard.next_card_due_at && (
+                                <div className={`flex items-center gap-2 text-sm ${isReviewMode ? "bg-white/10" : "bg-gray-100"} p-3 rounded-lg w-fit`}>
+                                    <Clock className="h-4 w-4" />
+                                    <span>Next review: {new Date(dashboard.next_card_due_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                            )}
+
+                            <Button 
+                                size="lg" 
+                                className={`w-full h-12 text-base font-semibold shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                                    isReviewMode 
+                                        ? "bg-white text-blue-600 hover:bg-blue-50" 
+                                        : "bg-blue-600 text-white hover:bg-blue-700"
+                                }`}
                                 onClick={() => router.push("/study")}
-                                disabled={
-                                    dashboard.due_reviews === 0 &&
-                                    !dashboard.available_new_card
-                                }
+                                disabled={!hasCardsAvailable}
                             >
-                                <Brain className="mr-2 h-5 w-5" />
-                                {dashboard.due_reviews > 0
-                                    ? "Start Review"
-                                    : "Learn New Card"}
+                                {isReviewMode ? "Start Review Session" : "Learn New Cards"}
                             </Button>
                         </CardContent>
                     </Card>
+
+                    {/* Today's Progress - Compact Grid */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <Card className="border-0 shadow-sm bg-white">
+                            <CardContent className="px-6 flex flex-col justify-between h-full">
+                                <div className="bg-green-100 p-2 w-fit rounded-lg mb-4">
+                                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                </div>
+                                <div>
+                                    <div className="text-2xl font-bold text-gray-900">{dashboard.today_stats.reviews_done}</div>
+                                    <div className="text-sm text-gray-500">Reviews Done</div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-0 shadow-sm bg-white">
+                            <CardContent className="px-6 flex flex-col justify-between h-full">
+                                <div className="bg-orange-100 p-2 w-fit rounded-lg mb-4">
+                                    <Flame className="h-5 w-5 text-orange-600" />
+                                </div>
+                                <div>
+                                    <div className="text-2xl font-bold text-gray-900">{dashboard.today_stats.new_cards_done}</div>
+                                    <div className="text-sm text-gray-500">New Learned</div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card className="col-span-2 border-0 shadow-sm bg-white">
+                            <CardContent className="px-6 flex items-center justify-between">
+                                <div>
+                                    <div className="text-sm text-gray-500 mb-1">Time Spent Today</div>
+                                    <div className="text-2xl font-bold text-gray-900">
+                                        {dashboard.today_stats.time_spent_minutes} <span className="text-sm font-normal text-gray-400">min</span>
+                                    </div>
+                                </div>
+                                <div className="bg-purple-100 p-3 rounded-full">
+                                    <Timer className="h-6 w-6 text-purple-600" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </motion.div>
+
+                {/* Stats Overview - Scrollable on mobile */}
+                <div>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 px-1">Overview</h2>
+                    <div className="flex overflow-x-auto pb-4 gap-4 -mx-4 px-4 md:grid md:grid-cols-5 md:overflow-visible md:pb-0 md:px-0 md:mx-0 snap-x">
+                        {stats.map((stat, index) => (
+                            <motion.div
+                                key={stat.label}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className="snap-center shrink-0 w-32 md:w-auto"
+                            >
+                                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center text-center h-full justify-center space-y-2">
+                                    <div className={`${stat.bg} p-2 rounded-full`}>
+                                        <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                                    </div>
+                                    <div>
+                                        <div className="text-xl font-bold text-gray-900">{stat.value}</div>
+                                        <div className="text-xs font-medium text-gray-500">{stat.label}</div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
             </div>
         </div>
     );

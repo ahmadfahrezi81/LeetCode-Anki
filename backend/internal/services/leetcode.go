@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	md "github.com/JohannesKaufmann/html-to-markdown"
 )
 
 const (
@@ -227,38 +229,22 @@ func (l *LeetCodeService) executeQuery(query string, variables map[string]interf
 	return gqlResp.Data, nil
 }
 
-// StripHTMLTags removes HTML tags from content (simple version)
+// StripHTMLTags converts HTML content to Markdown using a robust library
 func StripHTMLTags(content string) string {
-	// Remove HTML tags (basic implementation)
-	content = strings.ReplaceAll(content, "<p>", "\n")
-	content = strings.ReplaceAll(content, "</p>", "\n")
-	content = strings.ReplaceAll(content, "<strong>", "**")
-	content = strings.ReplaceAll(content, "</strong>", "**")
-	content = strings.ReplaceAll(content, "<code>", "`")
-	content = strings.ReplaceAll(content, "</code>", "`")
-	content = strings.ReplaceAll(content, "<pre>", "```\n")
-	content = strings.ReplaceAll(content, "</pre>", "\n```")
-	content = strings.ReplaceAll(content, "<ul>", "\n")
-	content = strings.ReplaceAll(content, "</ul>", "\n")
-	content = strings.ReplaceAll(content, "<li>", "- ")
-	content = strings.ReplaceAll(content, "</li>", "\n")
-	content = strings.ReplaceAll(content, "<em>", "*")
-	content = strings.ReplaceAll(content, "</em>", "*")
-	content = strings.ReplaceAll(content, "<br>", "\n")
-	content = strings.ReplaceAll(content, "<br/>", "\n")
+	// Clean up HTML before conversion
+	// Remove backticks inside code tags which cause double escaping
+	content = strings.ReplaceAll(content, "<code>`", "<code>")
+	content = strings.ReplaceAll(content, "`</code>", "</code>")
 
-	// Remove remaining tags (simple regex alternative)
-	for strings.Contains(content, "<") && strings.Contains(content, ">") {
-		start := strings.Index(content, "<")
-		end := strings.Index(content, ">")
-		if start < end {
-			content = content[:start] + content[end+1:]
-		} else {
-			break
-		}
+	converter := md.NewConverter("", true, nil)
+
+	markdown, err := converter.ConvertString(content)
+	if err != nil {
+		// Fallback to simple stripping if conversion fails
+		return strings.TrimSpace(content)
 	}
 
-	return strings.TrimSpace(content)
+	return markdown
 }
 
 // GenerateApproachHint creates a hint from the problem's hints or topics

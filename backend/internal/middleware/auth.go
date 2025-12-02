@@ -28,6 +28,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		userID, err := validateSupabaseToken(parts[1])
 		if err != nil {
+			fmt.Printf("Token validation error: %v\n", err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
 			return

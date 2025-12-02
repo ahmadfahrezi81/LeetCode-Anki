@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -15,6 +16,11 @@ type Config struct {
 	SupabaseJWTSecret string
 	OpenAIKey         string
 	Environment       string
+
+	// Anki-style daily limits
+	NewCardsPerDay int
+	ReviewsPerDay  int
+	LearnAheadMins int
 }
 
 var AppConfig *Config
@@ -31,6 +37,11 @@ func Load() error {
 		SupabaseJWTSecret: getEnv("SUPABASE_JWT_SECRET", ""),
 		OpenAIKey:         getEnv("OPENAI_API_KEY", ""),
 		Environment:       getEnv("ENVIRONMENT", "development"),
+
+		// Anki-style limits (with defaults)
+		NewCardsPerDay: getEnvInt("NEW_CARDS_PER_DAY", 20),
+		ReviewsPerDay:  getEnvInt("REVIEWS_PER_DAY", 200),
+		LearnAheadMins: getEnvInt("LEARN_AHEAD_MINS", 20),
 	}
 
 	// Validate required fields
@@ -53,6 +64,15 @@ func Load() error {
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
+	}
+	return defaultValue
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
 	}
 	return defaultValue
 }

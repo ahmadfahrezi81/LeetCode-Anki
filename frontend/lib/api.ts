@@ -1,6 +1,8 @@
 import { supabase } from "./supabase";
+import type { DashboardData, Card, SubmitAnswerResponse } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 
 async function getAuthToken(): Promise<string | null> {
     const { data } = await supabase.auth.getSession();
@@ -38,15 +40,36 @@ async function apiRequest<T>(
 
 export const api = {
     // Dashboard
-    getDashboard: () => apiRequest("/api/dashboard"),
+    getDashboard: (): Promise<DashboardData> =>
+        apiRequest<DashboardData>("/api/dashboard"),
 
     // Study Session
-    getNextCard: () => apiRequest("/api/card/next"),
+    getNextCard: (): Promise<{ card: Card | null; message?: string }> =>
+        apiRequest<{ card: Card | null; message?: string }>("/api/card/next"),
 
-    submitAnswer: (questionId: string, answer: string) =>
-        apiRequest("/api/review/submit", {
+    submitAnswer: (
+        questionId: string,
+        answer: string
+    ): Promise<SubmitAnswerResponse> =>
+        apiRequest<SubmitAnswerResponse>("/api/review/submit", {
             method: "POST",
             body: JSON.stringify({ question_id: questionId, answer }),
+        }),
+
+    skipCard: (questionId: string): Promise<{
+        message: string;
+        next_review_at: string;
+        card_state: string;
+        interval_minutes: number;
+    }> =>
+        apiRequest<{
+            message: string;
+            next_review_at: string;
+            card_state: string;
+            interval_minutes: number;
+        }>("/api/review/skip", {
+            method: "POST",
+            body: JSON.stringify({ question_id: questionId }),
         }),
 
     // Admin
@@ -60,5 +83,3 @@ export const api = {
 
     getProblemStats: () => apiRequest("/api/admin/problem-stats"),
 };
-
-export type { DashboardData, Card, SubmitAnswerResponse } from "@/types";
