@@ -126,10 +126,11 @@ export default function HistoryTable() {
                         <table className="w-full text-sm text-left">
                             <thead className="text-xs text-gray-500 uppercase bg-gray-50/50">
                                 <tr>
-                                    <th className="px-4 py-3 font-medium">Date</th>
                                     <th className="px-4 py-3 font-medium">Question</th>
+                                    <th className="px-4 py-3 font-medium">Difficulty</th>
                                     <th className="px-4 py-3 font-medium">Score</th>
                                     <th className="px-4 py-3 font-medium">State</th>
+                                    <th className="px-4 py-3 font-medium">Date</th>
                                     <th className="px-4 py-3 font-medium">Next Review</th>
                                     <th className="px-4 py-3 font-medium text-right">Actions</th>
                                 </tr>
@@ -138,31 +139,35 @@ export default function HistoryTable() {
                                 {loading ? (
                                     Array.from({ length: 5 }).map((_, i) => (
                                         <tr key={i} className="border-b border-gray-50">
-                                            <td className="px-4 py-4"><div className="h-4 bg-gray-100 rounded w-24 animate-pulse" /></td>
                                             <td className="px-4 py-4"><div className="h-4 bg-gray-100 rounded w-48 animate-pulse" /></td>
+                                            <td className="px-4 py-4"><div className="h-6 bg-gray-100 rounded w-16 animate-pulse" /></td>
                                             <td className="px-4 py-4"><div className="h-6 bg-gray-100 rounded w-12 animate-pulse" /></td>
                                             <td className="px-4 py-4"><div className="h-4 bg-gray-100 rounded w-20 animate-pulse" /></td>
+                                            <td className="px-4 py-4"><div className="h-4 bg-gray-100 rounded w-24 animate-pulse" /></td>
                                             <td className="px-4 py-4"><div className="h-4 bg-gray-100 rounded w-24 animate-pulse" /></td>
                                             <td className="px-4 py-4"><div className="h-8 bg-gray-100 rounded w-8 animate-pulse ml-auto" /></td>
                                         </tr>
                                     ))
                                 ) : history.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                                        <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                                             No history found
                                         </td>
                                     </tr>
                                 ) : (
                                     history.map((item) => (
                                         <tr key={item.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
-                                            <td className="px-4 py-4 whitespace-nowrap text-gray-500">
-                                                <div className="flex items-center gap-2">
-                                                    <Calendar className="h-3 w-3" />
-                                                    {formatDate(item.submitted_at)}
-                                                </div>
-                                            </td>
                                             <td className="px-4 py-4 font-medium text-gray-900">
                                                 {item.question_leetcode_id ? `${item.question_leetcode_id}. ` : ''}{item.question_title || 'Unknown Question'}
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                                                    ${item.question_difficulty === 'Easy' ? 'bg-green-50 text-green-700 border border-green-200' : 
+                                                      item.question_difficulty === 'Medium' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' : 
+                                                      item.question_difficulty === 'Hard' ? 'bg-red-50 text-red-700 border border-red-200' : 
+                                                      'bg-gray-100 text-gray-700 border border-gray-200'}`}>
+                                                    {item.question_difficulty || 'N/A'}
+                                                </span>
                                             </td>
                                             <td className="px-4 py-4">
                                                 <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getScoreColor(item.score)}`}>
@@ -177,6 +182,9 @@ export default function HistoryTable() {
                                                       'bg-gray-100 text-gray-700 border border-gray-200'}`}>
                                                     {item.card_state}
                                                 </span>
+                                            </td>
+                                            <td className="px-4 py-4 text-gray-500 text-xs">
+                                                {formatDate(item.submitted_at)}
                                             </td>
                                             <td className="px-4 py-4 text-gray-500 text-xs">
                                                 {formatDate(item.next_review_at)}

@@ -202,4 +202,5 @@ type History struct {
 	CreatedAt          time.Time          `json:"created_at"`
 	QuestionTitle      string             `json:"question_title"`
 	QuestionLeetcodeID int                `json:"question_leetcode_id"`
+	QuestionDifficulty string             `json:"question_difficulty"`
 }

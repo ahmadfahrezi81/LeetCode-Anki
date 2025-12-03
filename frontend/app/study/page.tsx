@@ -362,12 +362,6 @@ export default function StudyPage() {
                                                     </span>
                                                 )
                                             )}
-                                            <button
-                                                onClick={() => setShowTopics(!showTopics)}
-                                                className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 border border-gray-300"
-                                            >
-                                                {showTopics ? 'Hide Topics' : 'Show Topics'}
-                                            </button>
                                         </div>
                                         <CardTitle className="text-2xl text-gray-900 flex items-center gap-2">
                                             <span>

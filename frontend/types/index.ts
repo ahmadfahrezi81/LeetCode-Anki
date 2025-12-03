@@ -152,4 +152,5 @@ export interface History {
   created_at: string;
   question_title?: string;
   question_leetcode_id?: number;
+  question_difficulty?: "Easy" | "Medium" | "Hard";
 }

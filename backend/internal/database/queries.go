@@ -600,7 +600,7 @@ func GetHistoryByUser(userID string, limit, offset int) ([]models.History, error
 			h.sub_scores, h.solution_breakdown,
 			h.next_review_at, h.card_state, h.interval_minutes, h.interval_days,
 			h.created_at,
-			q.title, q.leetcode_id
+			q.title, q.leetcode_id, q.difficulty
 		FROM history h
 		JOIN questions q ON h.question_id = q.id
 		WHERE h.user_id = $1
@@ -625,7 +625,7 @@ func GetHistoryByUser(userID string, limit, offset int) ([]models.History, error
 			&subScoresJSON, &solutionBreakdownJSON,
 			&h.NextReviewAt, &h.CardState, &h.IntervalMinutes, &h.IntervalDays,
 			&h.CreatedAt,
-			&h.QuestionTitle, &h.QuestionLeetcodeID,
+			&h.QuestionTitle, &h.QuestionLeetcodeID, &h.QuestionDifficulty,
 		)
 		if err != nil {
 			return nil, err
@@ -654,7 +654,7 @@ func GetHistoryByQuestion(userID, questionID string) ([]models.History, error) {
 			h.sub_scores, h.solution_breakdown,
 			h.next_review_at, h.card_state, h.interval_minutes, h.interval_days,
 			h.created_at,
-			q.title, q.leetcode_id
+			q.title, q.leetcode_id, q.difficulty
 		FROM history h
 		JOIN questions q ON h.question_id = q.id
 		WHERE h.user_id = $1 AND h.question_id = $2
@@ -678,7 +678,7 @@ func GetHistoryByQuestion(userID, questionID string) ([]models.History, error) {
 			&subScoresJSON, &solutionBreakdownJSON,
 			&h.NextReviewAt, &h.CardState, &h.IntervalMinutes, &h.IntervalDays,
 			&h.CreatedAt,
-			&h.QuestionTitle, &h.QuestionLeetcodeID,
+			&h.QuestionTitle, &h.QuestionLeetcodeID, &h.QuestionDifficulty,
 		)
 		if err != nil {
 			return nil, err
@@ -707,7 +707,7 @@ func GetLatestAttempt(userID, questionID string) (*models.History, error) {
 			h.sub_scores, h.solution_breakdown,
 			h.next_review_at, h.card_state, h.interval_minutes, h.interval_days,
 			h.created_at,
-			q.title, q.leetcode_id
+			q.title, q.leetcode_id, q.difficulty
 		FROM history h
 		JOIN questions q ON h.question_id = q.id
 		WHERE h.user_id = $1 AND h.question_id = $2
@@ -724,7 +724,7 @@ func GetLatestAttempt(userID, questionID string) (*models.History, error) {
 		&subScoresJSON, &solutionBreakdownJSON,
 		&h.NextReviewAt, &h.CardState, &h.IntervalMinutes, &h.IntervalDays,
 		&h.CreatedAt,
-		&h.QuestionTitle, &h.QuestionLeetcodeID,
+		&h.QuestionTitle, &h.QuestionLeetcodeID, &h.QuestionDifficulty,
 	)
 
 	if err == sql.ErrNoRows {
