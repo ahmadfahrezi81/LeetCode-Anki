@@ -99,7 +99,7 @@ export default function SubmissionReport({
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+        <div className="min-h-screen bg-gray-50 md:p-8">
             <div className="mx-auto max-w-6xl">
                 {/* Header */}
                 <div className="mb-6 flex items-center justify-between">
@@ -107,12 +107,6 @@ export default function SubmissionReport({
                         <Trophy className="h-7 w-7 text-yellow-500" />
                         Your Learning Report
                     </h1>
-                    {onNext && (
-                        <Button onClick={onNext} className="bg-blue-600 hover:bg-blue-700 text-white">
-                            <Brain className="mr-2 h-4 w-4" />
-                            {nextLabel}
-                        </Button>
-                    )}
                 </div>
 
                 {/* Overall Score Card */}

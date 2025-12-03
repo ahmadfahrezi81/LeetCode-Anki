@@ -204,16 +204,16 @@ export default function HistoryTable() {
                 <DrawerContent
                     className="
                         h-[95vh] mt-0 rounded-t-[10px] bg-gray-50
-                        [&>*:first-child]:bg-gray-500  
+                        [&>*:first-child]:bg-gray-500
                     "
                 >
-                    <DrawerHeader className="text-left px-6 pt-6">
+                    <DrawerHeader className="text-left px-4 pt-6">
                         <DrawerTitle>Submission Details</DrawerTitle>
                         <DrawerDescription>
                             Review your answer, score, and detailed feedback.
                         </DrawerDescription>
                     </DrawerHeader>
-                    <div className="flex-1 overflow-y-auto px-6 pb-10">
+                    <div className="flex-1 overflow-y-auto px-4 pb-10">
                         {loadingQuestion ? (
                             <div className="flex items-center justify-center py-12">
                                 <div className="text-center">

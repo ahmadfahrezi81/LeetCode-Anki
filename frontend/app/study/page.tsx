@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import SubmissionReport from "@/components/SubmissionReport";
+import { div } from "framer-motion/client";
 
 
 export default function StudyPage() {
@@ -295,13 +296,16 @@ export default function StudyPage() {
     // If showing result, render the feedback page
     if (showResult && result) {
         return (
-            <SubmissionReport 
-                result={result} 
-                userAnswer={answer} 
-                question={card.question} 
-                onNext={handleNext}
-                nextLabel="Continue Learning"
-            />
+            <div className="p-4 min-h-screen bg-gray-50">
+                <SubmissionReport 
+                    result={result} 
+                    userAnswer={answer} 
+                    question={card.question} 
+                    onNext={handleNext}
+                    nextLabel="Continue Learning"
+                />
+            </div>
+        
         );
     }
 
