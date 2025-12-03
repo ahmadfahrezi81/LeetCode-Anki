@@ -56,7 +56,7 @@ func (l *LLMService) ScoreAnswer(ctx context.Context, questionTitle, questionDes
 	resp, err := l.client.CreateChatCompletion(
 		ctx,
 		openai.ChatCompletionRequest{
-			Model: openai.GPT4o,
+			Model: openai.GPT4oMini,
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleSystem,
