@@ -595,14 +595,16 @@ func CreateHistory(history *models.History) error {
 func GetHistoryByUser(userID string, limit, offset int) ([]models.History, error) {
 	query := `
 		SELECT 
-			id, user_id, question_id, user_answer, submitted_at,
-			score, feedback, correct_approach,
-			sub_scores, solution_breakdown,
-			next_review_at, card_state, interval_minutes, interval_days,
-			created_at
-		FROM history
-		WHERE user_id = $1
-		ORDER BY submitted_at DESC
+			h.id, h.user_id, h.question_id, h.user_answer, h.submitted_at,
+			h.score, h.feedback, h.correct_approach,
+			h.sub_scores, h.solution_breakdown,
+			h.next_review_at, h.card_state, h.interval_minutes, h.interval_days,
+			h.created_at,
+			q.title, q.leetcode_id
+		FROM history h
+		JOIN questions q ON h.question_id = q.id
+		WHERE h.user_id = $1
+		ORDER BY h.submitted_at DESC
 		LIMIT $2 OFFSET $3
 	`
 
@@ -623,6 +625,7 @@ func GetHistoryByUser(userID string, limit, offset int) ([]models.History, error
 			&subScoresJSON, &solutionBreakdownJSON,
 			&h.NextReviewAt, &h.CardState, &h.IntervalMinutes, &h.IntervalDays,
 			&h.CreatedAt,
+			&h.QuestionTitle, &h.QuestionLeetcodeID,
 		)
 		if err != nil {
 			return nil, err
@@ -646,14 +649,16 @@ func GetHistoryByUser(userID string, limit, offset int) ([]models.History, error
 func GetHistoryByQuestion(userID, questionID string) ([]models.History, error) {
 	query := `
 		SELECT 
-			id, user_id, question_id, user_answer, submitted_at,
-			score, feedback, correct_approach,
-			sub_scores, solution_breakdown,
-			next_review_at, card_state, interval_minutes, interval_days,
-			created_at
-		FROM history
-		WHERE user_id = $1 AND question_id = $2
-		ORDER BY submitted_at DESC
+			h.id, h.user_id, h.question_id, h.user_answer, h.submitted_at,
+			h.score, h.feedback, h.correct_approach,
+			h.sub_scores, h.solution_breakdown,
+			h.next_review_at, h.card_state, h.interval_minutes, h.interval_days,
+			h.created_at,
+			q.title, q.leetcode_id
+		FROM history h
+		JOIN questions q ON h.question_id = q.id
+		WHERE h.user_id = $1 AND h.question_id = $2
+		ORDER BY h.submitted_at DESC
 	`
 
 	rows, err := DB.Query(query, userID, questionID)
@@ -673,6 +678,7 @@ func GetHistoryByQuestion(userID, questionID string) ([]models.History, error) {
 			&subScoresJSON, &solutionBreakdownJSON,
 			&h.NextReviewAt, &h.CardState, &h.IntervalMinutes, &h.IntervalDays,
 			&h.CreatedAt,
+			&h.QuestionTitle, &h.QuestionLeetcodeID,
 		)
 		if err != nil {
 			return nil, err
@@ -696,14 +702,16 @@ func GetHistoryByQuestion(userID, questionID string) ([]models.History, error) {
 func GetLatestAttempt(userID, questionID string) (*models.History, error) {
 	query := `
 		SELECT 
-			id, user_id, question_id, user_answer, submitted_at,
-			score, feedback, correct_approach,
-			sub_scores, solution_breakdown,
-			next_review_at, card_state, interval_minutes, interval_days,
-			created_at
-		FROM history
-		WHERE user_id = $1 AND question_id = $2
-		ORDER BY submitted_at DESC
+			h.id, h.user_id, h.question_id, h.user_answer, h.submitted_at,
+			h.score, h.feedback, h.correct_approach,
+			h.sub_scores, h.solution_breakdown,
+			h.next_review_at, h.card_state, h.interval_minutes, h.interval_days,
+			h.created_at,
+			q.title, q.leetcode_id
+		FROM history h
+		JOIN questions q ON h.question_id = q.id
+		WHERE h.user_id = $1 AND h.question_id = $2
+		ORDER BY h.submitted_at DESC
 		LIMIT 1
 	`
 
@@ -716,6 +724,7 @@ func GetLatestAttempt(userID, questionID string) (*models.History, error) {
 		&subScoresJSON, &solutionBreakdownJSON,
 		&h.NextReviewAt, &h.CardState, &h.IntervalMinutes, &h.IntervalDays,
 		&h.CreatedAt,
+		&h.QuestionTitle, &h.QuestionLeetcodeID,
 	)
 
 	if err == sql.ErrNoRows {

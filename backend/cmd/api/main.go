@@ -54,6 +54,7 @@ func main() {
 	adminHandler := handlers.NewAdminHandler()
 	historyHandler := handlers.NewHistoryHandler()
 	transcribeHandler := handlers.NewTranscribeHandler()
+	questionsHandler := handlers.NewQuestionsHandler()
 
 	// Public routes
 	router.GET("/health", healthHandler.HealthCheck)
@@ -69,6 +70,9 @@ func main() {
 		api.GET("/card/next", reviewHandler.GetNextCard)
 		api.POST("/review/submit", reviewHandler.SubmitAnswer)
 		api.POST("/review/skip", reviewHandler.SkipCard)
+
+		// Questions
+		api.GET("/questions/:id", questionsHandler.GetQuestionDetail)
 
 		// History
 		api.GET("/history", historyHandler.GetHistory)

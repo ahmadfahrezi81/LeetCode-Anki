@@ -150,4 +150,6 @@ export interface History {
   interval_minutes: number;
   interval_days: number;
   created_at: string;
+  question_title?: string;
+  question_leetcode_id?: number;
 }

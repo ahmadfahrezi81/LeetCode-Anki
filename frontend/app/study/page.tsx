@@ -31,6 +31,7 @@ import {
     Zap,
     AlertTriangle,
     Mic,
+    ExternalLink,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -364,8 +365,19 @@ export default function StudyPage() {
                                                 {showTopics ? 'Hide Topics' : 'Show Topics'}
                                             </button>
                                         </div>
-                                        <CardTitle className="text-2xl text-gray-900">
-                                            {card.question.title}
+                                        <CardTitle className="text-2xl text-gray-900 flex items-center gap-2">
+                                            <span>
+                                                {card.question.leetcode_id}. {card.question.title}
+                                            </span>
+                                            <a 
+                                                href={`https://leetcode.com/problems/${card.question.slug}/description/`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-gray-400 hover:text-blue-600 transition-colors"
+                                                title="View on LeetCode"
+                                            >
+                                                <ExternalLink className="h-5 w-5" />
+                                            </a>
                                         </CardTitle>
                                     </div>
                                     <BookOpen className="h-6 w-6 text-gray-400" />

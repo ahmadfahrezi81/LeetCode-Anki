@@ -21,6 +21,7 @@ import {
     Code,
     Zap,
     AlertTriangle,
+    ExternalLink,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -263,8 +264,19 @@ export default function SubmissionReport({
                                                 </span>
                                             ))}
                                         </div>
-                                        <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                                            {question.title}
+                                        <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                            <span>
+                                                {question.leetcode_id}. {question.title}
+                                            </span>
+                                            <a 
+                                                href={`https://leetcode.com/problems/${question.slug}/description/`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-gray-400 hover:text-blue-600 transition-colors"
+                                                title="View on LeetCode"
+                                            >
+                                                <ExternalLink className="h-5 w-5" />
+                                            </a>
                                         </h3>
                                         <div className="text-gray-700 leading-relaxed">
                                             <ReactMarkdown 
