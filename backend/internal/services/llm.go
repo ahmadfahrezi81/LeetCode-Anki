@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"leetcode-anki/backend/config"
 	"leetcode-anki/backend/internal/models"
 	"log"
@@ -242,4 +243,78 @@ func clampScore(score int) int {
 		return 5
 	}
 	return score
+}
+
+// TranscribeAudio uses OpenAI Whisper API to transcribe audio to text
+func (l *LLMService) TranscribeAudio(ctx context.Context, audioFile io.Reader, filename string) (string, error) {
+	req := openai.AudioRequest{
+		Model:    openai.Whisper1,
+		FilePath: filename,
+		Reader:   audioFile,
+		Prompt:   "This is a technical explanation of an algorithm or data structure problem. The speaker may mention terms like hashmap, binary search, O(n), pseudocode, edge cases, etc.",
+	}
+
+	resp, err := l.client.CreateTranscription(ctx, req)
+	if err != nil {
+		return "", fmt.Errorf("whisper API error: %w", err)
+	}
+
+	log.Printf("🎤 Transcribed audio: %s", resp.Text)
+	return resp.Text, nil
+}
+
+// EnhanceAnswer uses GPT-4o-mini to clean up transcription errors only
+func (l *LLMService) EnhanceAnswer(ctx context.Context, rawTranscription string) (string, error) {
+	prompt := fmt.Sprintf(`You are cleaning up a voice transcription of a student explaining their algorithm approach.
+
+**Raw Transcription:**
+%s
+
+**Your Task:**
+Fix ONLY speech-to-text errors and basic grammar. DO NOT add any content, explanations, or pseudocode that wasn't explicitly said.
+
+**Fix:**
+- Speech recognition errors (e.g., "hash map" → "hashmap", "oh of n" → "O(n)", "for loop" → "for loop")
+- Technical term corrections (binary search, two pointers, sliding window, etc.)
+- Basic grammar and punctuation
+- Remove filler words (um, uh, like, you know)
+
+**DO NOT:**
+- Add explanations the user didn't say
+- Generate pseudocode unless they dictated it line by line
+- Add steps or details they didn't mention
+- Restructure their explanation significantly
+
+**Output the minimally cleaned transcription directly, preserving their exact words and approach.**`, rawTranscription)
+
+	resp, err := l.client.CreateChatCompletion(
+		ctx,
+		openai.ChatCompletionRequest{
+			Model: openai.GPT4oMini,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleSystem,
+					Content: "You are an expert at cleaning up technical transcriptions and formatting algorithm explanations.",
+				},
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: prompt,
+				},
+			},
+			Temperature: 0.3,
+			MaxTokens:   500,
+		},
+	)
+
+	if err != nil {
+		return "", fmt.Errorf("GPT API error: %w", err)
+	}
+
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("no response from GPT")
+	}
+
+	enhanced := resp.Choices[0].Message.Content
+	log.Printf("✨ Enhanced answer: %s", enhanced)
+	return enhanced, nil
 }

@@ -30,6 +30,7 @@ import {
     Code,
     Zap,
     AlertTriangle,
+    Mic,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -48,6 +49,9 @@ export default function StudyPage() {
     const [skipping, setSkipping] = useState(false);
     const [showTopics, setShowTopics] = useState(false);
     const [showQuestionInReport, setShowQuestionInReport] = useState(true);
+    const [isRecording, setIsRecording] = useState(false);
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
 
     useEffect(() => {
         let ignore = false;
@@ -83,6 +87,71 @@ export default function StudyPage() {
             console.error("Failed to load card:", err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const recorder = new MediaRecorder(stream);
+            const chunks: Blob[] = [];
+
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    chunks.push(e.data);
+                }
+            };
+
+            recorder.onstop = async () => {
+                setIsTranscribing(true);
+                const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+                
+                // Send to backend for transcription
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'recording.webm');
+
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/transcribe`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${session?.access_token}`,
+                        },
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Transcription failed');
+                    }
+
+                    const result = await response.json();
+                    // Append transcribed text to answer
+                    setAnswer(prev => prev ? `${prev}\n\n${result.text}` : result.text);
+                } catch (err) {
+                    console.error('Transcription error:', err);
+                    alert('Failed to transcribe audio. Please try again.');
+                } finally {
+                    setIsTranscribing(false);
+                }
+
+                // Stop all tracks
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            recorder.start();
+            setMediaRecorder(recorder);
+            setIsRecording(true);
+        } catch (err) {
+            console.error('Failed to start recording:', err);
+            alert('Failed to access microphone. Please check permissions.');
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            setIsRecording(false);
+            setMediaRecorder(null);
         }
     };
 
@@ -199,18 +268,7 @@ export default function StudyPage() {
         return null; // Use date for review cards
     };
 
-    // Get learning progress
-    const getLearningProgress = () => {
-        if (card.review.card_state === "learning" || card.review.card_state === "relearning") {
-            const step = card.review.current_step || 0;
-            const totalSteps = 4;
-            const percentage = ((step + 1) / totalSteps) * 100;
-            return { step: step + 1, totalSteps, percentage };
-        }
-        return null;
-    };
 
-    const learningProgress = getLearningProgress();
 
     // Render sub-score bar
     const renderSubScoreBar = (score: number, label: string) => {
@@ -423,46 +481,44 @@ export default function StudyPage() {
                                     you would use to solve this problem
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-4">
-                                {/* Learning Progress */}
-                                {learningProgress && (
-                                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                        <div className="mb-2 flex items-center justify-between text-sm">
-                                            <span className="font-medium text-gray-900">
-                                                Learning Progress
-                                            </span>
-                                            <span className="text-gray-600">
-                                                Step {learningProgress.step}/
-                                                {learningProgress.totalSteps}
-                                            </span>
+                            <CardContent className="space-y-6">
+                                <div className="relative">
+                                    <Textarea
+                                        placeholder="Example: I would use a hashmap to store complements. For each number, I check if target minus the current number exists in the map..."
+                                        value={answer}
+                                        onChange={(e) => setAnswer(e.target.value)}
+                                        className="max-h-60 min-h-32 resize-none bg-white border-gray-300 pr-12"
+                                        disabled={isTranscribing}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant={isRecording ? "destructive" : "outline"}
+                                        size="icon"
+                                        className={`absolute top-2 right-2 ${isRecording ? 'animate-pulse' : ''}`}
+                                        onClick={isRecording ? stopRecording : startRecording}
+                                        disabled={submitting || skipping || isTranscribing}
+                                    >
+                                        <Mic className={`h-4 w-4 ${isRecording ? 'text-white' : ''}`} />
+                                    </Button>
+                                    {isRecording && (
+                                        <div className="absolute top-2 right-14 flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-medium border border-red-300">
+                                            <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                                            Recording...
                                         </div>
-                                        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                                            <div
-                                                className="h-full bg-blue-600 transition-all duration-300"
-                                                style={{
-                                                    width: `${learningProgress.percentage}%`,
-                                                }}
-                                            />
+                                    )}
+                                    {isTranscribing && (
+                                        <div className="absolute top-2 right-14 flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium border border-blue-300">
+                                            <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                                            Transcribing...
                                         </div>
-                                        <p className="mt-2 text-xs text-gray-600">
-                                            10min → 1hr → 6hr → 1day
-                                        </p>
-                                    </div>
-                                )}
-
-                                <Textarea
-                                    placeholder="Example: I would use a hashmap to store complements. For each number, I check if target minus the current number exists in the map..."
-                                    value={answer}
-                                    onChange={(e) => setAnswer(e.target.value)}
-                                    rows={8}
-                                    className="resize-none bg-white border-gray-300"
-                                />
+                                    )}
+                                </div>
                                 <div className="flex gap-2">
                                     <Button
                                         variant="outline"
                                         onClick={handleSkip}
-                                        disabled={skipping || submitting}
-                                        className="flex-1"
+                                        disabled={skipping || submitting || isTranscribing}
+                                        className="flex-[0.4]"
                                     >
                                         {skipping ? (
                                             <>Processing...</>
@@ -475,8 +531,8 @@ export default function StudyPage() {
                                     </Button>
                                     <Button
                                         onClick={handleSubmit}
-                                        disabled={submitting || !answer.trim() || skipping}
-                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                                        disabled={submitting || !answer.trim() || skipping || isTranscribing}
+                                        className="flex-[1.6] bg-blue-600 hover:bg-blue-700 text-white"
                                     >
                                         {submitting ? (
                                             <>Processing...</>

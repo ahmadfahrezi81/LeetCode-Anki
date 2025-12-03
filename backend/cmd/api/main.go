@@ -53,6 +53,7 @@ func main() {
 	dashboardHandler := handlers.NewDashboardHandler()
 	adminHandler := handlers.NewAdminHandler()
 	historyHandler := handlers.NewHistoryHandler()
+	transcribeHandler := handlers.NewTranscribeHandler()
 
 	// Public routes
 	router.GET("/health", healthHandler.HealthCheck)
@@ -72,6 +73,9 @@ func main() {
 		// History
 		api.GET("/history", historyHandler.GetHistory)
 		api.GET("/history/:question_id", historyHandler.GetQuestionHistory)
+
+		// Voice transcription
+		api.POST("/transcribe", transcribeHandler.TranscribeAudio)
 
 		// Admin endpoints (optional: add auth check)
 		api.POST("/admin/refresh-problems", adminHandler.RefreshProblems)
