@@ -27,12 +27,6 @@ leetcode-anki/
 │   ├── go.sum
 │   └── Dockerfile
 │
-├── worker/                     # Python Crawler
-│   ├── main.py                 # Entry point (cron job)
-│   ├── scraper.py              # Crawl4AI logic
-│   ├── requirements.txt
-│   └── Dockerfile
-│
 ├── frontend/                   # Next.js 14 App Router
 │   ├── app/
 │   │   ├── layout.tsx

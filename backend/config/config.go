@@ -16,6 +16,7 @@ type Config struct {
 	SupabaseJWTSecret string
 	OpenAIKey         string
 	Environment       string
+	AllowOrigin       string // <- Add this field
 
 	// Anki-style daily limits
 	NewCardsPerDay int
@@ -37,6 +38,7 @@ func Load() error {
 		SupabaseJWTSecret: getEnv("SUPABASE_JWT_SECRET", ""),
 		OpenAIKey:         getEnv("OPENAI_API_KEY", ""),
 		Environment:       getEnv("ENVIRONMENT", "development"),
+		AllowOrigin:       getEnv("ALLOW_ORIGIN", "http://localhost:3000"), // <- Add this
 
 		// Anki-style limits (with defaults)
 		NewCardsPerDay: getEnvInt("NEW_CARDS_PER_DAY", 20),

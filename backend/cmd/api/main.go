@@ -7,7 +7,9 @@ import (
 	"leetcode-anki/backend/internal/middleware"
 	"log/slog"
 	"os"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,7 +18,7 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	// Load configuration
+	// Load configuration (reads .env locally or env vars in prod)
 	if err := config.Load(); err != nil {
 		logger.Error("Failed to load config", "error", err)
 		os.Exit(1)
@@ -33,19 +35,15 @@ func main() {
 	// Initialize Gin router
 	router := gin.Default()
 
-	// CORS middleware (adjust origins as needed)
-	router.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	})
+	// CORS using env value
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{config.AppConfig.AllowOrigin},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Initialize handlers
 	healthHandler := handlers.NewHealthHandler()
@@ -81,13 +79,14 @@ func main() {
 		// Voice transcription
 		api.POST("/transcribe", transcribeHandler.TranscribeAudio)
 
-		// Admin endpoints (optional: add auth check)
+		// Admin endpoints
 		api.POST("/admin/refresh-problems", adminHandler.RefreshProblems)
 		api.GET("/admin/problem-stats", adminHandler.GetProblemStats)
 	}
 
 	port := config.AppConfig.ServerPort
 	logger.Info("🚀 Server starting", "port", port)
+
 	if err := router.Run(":" + port); err != nil {
 		logger.Error("Failed to start server", "error", err)
 		os.Exit(1)
