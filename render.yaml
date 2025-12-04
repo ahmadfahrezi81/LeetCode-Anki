@@ -2,7 +2,7 @@ services:
   - type: web
     name: leetcode-anki-backend
     env: docker
-    region: oregon
+    region: singapore
     plan: free
     dockerContext: ./backend
     dockerfilePath: ./backend/Dockerfile
@@ -20,3 +20,5 @@ services:
         sync: false
       - key: PORT
         value: 8080
+      - key: ALLOW_ORIGIN
+        sync: false
