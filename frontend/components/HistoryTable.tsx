@@ -221,7 +221,7 @@ export default function HistoryTable() {
                             Review your answer, score, and detailed feedback.
                         </DrawerDescription>
                     </DrawerHeader>
-                    <div className="flex-1 overflow-y-auto px-4 pb-10">
+                    <div className="flex-1 overflow-y-auto px-4 pb-10 select-text">
                         {loadingQuestion ? (
                             <div className="flex items-center justify-center py-12">
                                 <div className="text-center">
