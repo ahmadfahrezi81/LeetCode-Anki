@@ -232,6 +232,7 @@ func (h *ReviewHandler) SubmitAnswer(c *gin.Context) {
 		CardState:         review.CardState,
 		IntervalMinutes:   review.IntervalMinutes,
 		IntervalDays:      review.IntervalDays,
+		TimeSpentSeconds:  req.TimeSpentSeconds,
 	}
 
 	err = database.CreateHistory(history)

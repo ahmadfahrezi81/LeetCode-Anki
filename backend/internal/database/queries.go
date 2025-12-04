@@ -344,9 +344,24 @@ func GetTodayStats(userID string) (*models.TodayStats, error) {
 	}
 	stats.NewCardsDone = newToday
 
-	// Time spent (approximate - based on review count * average time)
-	// This is a placeholder - you'd want to track actual time in the future
-	stats.TimeSpentMinutes = (stats.ReviewsDone + stats.NewCardsDone) * 3 // ~3 min per card
+	// Time spent - calculate from actual history records
+	var totalSeconds sql.NullInt64
+	err = DB.QueryRow(`
+		SELECT COALESCE(SUM(time_spent_seconds), 0)
+		FROM history
+		WHERE user_id = $1
+		AND DATE(submitted_at) = CURRENT_DATE
+	`, userID).Scan(&totalSeconds)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert seconds to minutes (round up)
+	if totalSeconds.Valid {
+		stats.TimeSpentMinutes = int((totalSeconds.Int64 + 59) / 60) // Round up
+	} else {
+		stats.TimeSpentMinutes = 0
+	}
 
 	return stats, nil
 }
@@ -556,9 +571,9 @@ func CreateHistory(history *models.History) error {
 			user_id, question_id, user_answer, submitted_at,
 			score, feedback, correct_approach,
 			sub_scores, solution_breakdown,
-			next_review_at, card_state, interval_minutes, interval_days
+			next_review_at, card_state, interval_minutes, interval_days, time_spent_seconds
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING id, created_at
 	`
 
@@ -588,6 +603,7 @@ func CreateHistory(history *models.History) error {
 		history.CardState,
 		history.IntervalMinutes,
 		history.IntervalDays,
+		history.TimeSpentSeconds,
 	).Scan(&history.ID, &history.CreatedAt)
 }
 
@@ -599,7 +615,7 @@ func GetHistoryByUser(userID string, limit, offset int) ([]models.History, error
 			h.score, h.feedback, h.correct_approach,
 			h.sub_scores, h.solution_breakdown,
 			h.next_review_at, h.card_state, h.interval_minutes, h.interval_days,
-			h.created_at,
+			h.time_spent_seconds, h.created_at,
 			q.title, q.leetcode_id, q.difficulty
 		FROM history h
 		JOIN questions q ON h.question_id = q.id
@@ -624,7 +640,7 @@ func GetHistoryByUser(userID string, limit, offset int) ([]models.History, error
 			&h.Score, &h.Feedback, &h.CorrectApproach,
 			&subScoresJSON, &solutionBreakdownJSON,
 			&h.NextReviewAt, &h.CardState, &h.IntervalMinutes, &h.IntervalDays,
-			&h.CreatedAt,
+			&h.TimeSpentSeconds, &h.CreatedAt,
 			&h.QuestionTitle, &h.QuestionLeetcodeID, &h.QuestionDifficulty,
 		)
 		if err != nil {
@@ -653,7 +669,7 @@ func GetHistoryByQuestion(userID, questionID string) ([]models.History, error) {
 			h.score, h.feedback, h.correct_approach,
 			h.sub_scores, h.solution_breakdown,
 			h.next_review_at, h.card_state, h.interval_minutes, h.interval_days,
-			h.created_at,
+			h.time_spent_seconds, h.created_at,
 			q.title, q.leetcode_id, q.difficulty
 		FROM history h
 		JOIN questions q ON h.question_id = q.id
@@ -677,7 +693,7 @@ func GetHistoryByQuestion(userID, questionID string) ([]models.History, error) {
 			&h.Score, &h.Feedback, &h.CorrectApproach,
 			&subScoresJSON, &solutionBreakdownJSON,
 			&h.NextReviewAt, &h.CardState, &h.IntervalMinutes, &h.IntervalDays,
-			&h.CreatedAt,
+			&h.TimeSpentSeconds, &h.CreatedAt,
 			&h.QuestionTitle, &h.QuestionLeetcodeID, &h.QuestionDifficulty,
 		)
 		if err != nil {
@@ -706,7 +722,7 @@ func GetLatestAttempt(userID, questionID string) (*models.History, error) {
 			h.score, h.feedback, h.correct_approach,
 			h.sub_scores, h.solution_breakdown,
 			h.next_review_at, h.card_state, h.interval_minutes, h.interval_days,
-			h.created_at,
+			h.time_spent_seconds, h.created_at,
 			q.title, q.leetcode_id, q.difficulty
 		FROM history h
 		JOIN questions q ON h.question_id = q.id
@@ -723,7 +739,7 @@ func GetLatestAttempt(userID, questionID string) (*models.History, error) {
 		&h.Score, &h.Feedback, &h.CorrectApproach,
 		&subScoresJSON, &solutionBreakdownJSON,
 		&h.NextReviewAt, &h.CardState, &h.IntervalMinutes, &h.IntervalDays,
-		&h.CreatedAt,
+		&h.TimeSpentSeconds, &h.CreatedAt,
 		&h.QuestionTitle, &h.QuestionLeetcodeID, &h.QuestionDifficulty,
 	)
 

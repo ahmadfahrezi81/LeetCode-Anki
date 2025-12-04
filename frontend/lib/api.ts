@@ -49,11 +49,16 @@ export const api = {
 
     submitAnswer: (
         questionId: string,
-        answer: string
+        answer: string,
+        timeSpentSeconds: number = 0
     ): Promise<SubmitAnswerResponse> =>
         apiRequest<SubmitAnswerResponse>("/api/review/submit", {
             method: "POST",
-            body: JSON.stringify({ question_id: questionId, answer }),
+            body: JSON.stringify({ 
+                question_id: questionId, 
+                answer,
+                time_spent_seconds: timeSpentSeconds 
+            }),
         }),
 
     skipCard: (questionId: string): Promise<{

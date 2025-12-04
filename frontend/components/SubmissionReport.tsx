@@ -111,7 +111,7 @@ export default function SubmissionReport({
 
                 {/* Overall Score Card */}
                 <Card className={`mb-6 border-2 ${getScoreBgColor(result.score)}`}>
-                    <CardContent className="pt-6">
+                    <CardContent>
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600 mb-1">Overall Score</p>

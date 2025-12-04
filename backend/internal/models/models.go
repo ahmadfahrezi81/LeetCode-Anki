@@ -64,8 +64,9 @@ type QuestionFilters struct {
 
 // SubmitAnswerRequest is the payload for answer submission
 type SubmitAnswerRequest struct {
-	QuestionID string `json:"question_id" binding:"required"`
-	Answer     string `json:"answer" binding:"required"`
+	QuestionID       string `json:"question_id" binding:"required"`
+	Answer           string `json:"answer" binding:"required"`
+	TimeSpentSeconds int    `json:"time_spent_seconds"` // Time spent on this card in seconds
 }
 
 // SkipRequest is the payload for skipping a card
@@ -199,6 +200,7 @@ type History struct {
 	CardState          string             `json:"card_state"`
 	IntervalMinutes    int                `json:"interval_minutes"`
 	IntervalDays       int                `json:"interval_days"`
+	TimeSpentSeconds   int                `json:"time_spent_seconds"` // Actual time spent on this card
 	CreatedAt          time.Time          `json:"created_at"`
 	QuestionTitle      string             `json:"question_title"`
 	QuestionLeetcodeID int                `json:"question_leetcode_id"`

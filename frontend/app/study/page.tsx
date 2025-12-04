@@ -54,6 +54,7 @@ export default function StudyPage() {
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+    const [cardLoadTime, setCardLoadTime] = useState<number>(Date.now()); // Track when card was loaded
 
     useEffect(() => {
         let ignore = false;
@@ -81,6 +82,7 @@ export default function StudyPage() {
             const data = await api.getNextCard();
             if (data.card) {
                 setCard(data.card);
+                setCardLoadTime(Date.now()); // Record when card was loaded
             } else {
                 // No cards available
                 router.push("/");
@@ -160,9 +162,12 @@ export default function StudyPage() {
     const handleSubmit = async () => {
         if (!card || !answer.trim()) return;
 
+        // Calculate time spent in seconds
+        const timeSpentSeconds = Math.floor((Date.now() - cardLoadTime) / 1000);
+
         setSubmitting(true);
         try {
-            const response = await api.submitAnswer(card.question.id, answer);
+            const response = await api.submitAnswer(card.question.id, answer, timeSpentSeconds);
             console.log("🔍 Full response from backend:", response);
             console.log("📊 Sub-scores:", response.sub_scores);
             console.log("💻 Solution breakdown:", response.solution_breakdown);
