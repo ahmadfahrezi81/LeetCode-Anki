@@ -251,6 +251,7 @@ func (l *LLMService) TranscribeAudio(ctx context.Context, audioFile io.Reader, f
 		Model:    openai.Whisper1,
 		FilePath: filename,
 		Reader:   audioFile,
+		Language: "en", // Force English transcription for consistent output
 		Prompt:   "This is a technical explanation of an algorithm or data structure problem. The speaker may mention terms like hashmap, binary search, O(n), pseudocode, edge cases, etc.",
 	}
 
