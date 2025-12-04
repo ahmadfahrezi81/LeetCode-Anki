@@ -179,12 +179,6 @@ export default function StudyPage() {
     const handleSkip = async () => {
         if (!card) return;
 
-        const confirmed = window.confirm(
-            "Skip this card? It will be reset to the first learning step (10 minutes)."
-        );
-
-        if (!confirmed) return;
-
         setSkipping(true);
         try {
             await api.skipCard(card.question.id);
@@ -535,7 +529,7 @@ export default function StudyPage() {
                                         ) : (
                                             <>
                                                 <SkipForward className="mr-2 h-4 w-4" />
-                                                Skip Card
+                                                Skip Card (10 min)
                                             </>
                                         )}
                                     </Button>
