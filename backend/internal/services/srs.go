@@ -14,9 +14,9 @@ func NewSM2Algorithm() *SM2Algorithm {
 }
 
 // LearningSteps defines the progression for learning cards (in minutes)
-// AGGRESSIVE MODE: Single 10-minute step for rapid exploration
+// AGGRESSIVE MODE: Single 30-minute step for rapid exploration
 // This allows you to see all 150 cards quickly while still getting spaced repetition
-var LearningSteps = []int{10}
+var LearningSteps = []int{30}
 
 // CalculateNextReview updates the review card based on the score
 // Implements Anki-like spaced repetition with sub-day intervals for learning cards
@@ -52,7 +52,7 @@ func (s *SM2Algorithm) CalculateNextReview(review *models.Review, score int) {
 // handleLearningCard processes cards in learning/relearning state
 func (s *SM2Algorithm) handleLearningCard(review *models.Review, score int, now time.Time) {
 	if score < 3 {
-		// Failed: Reset to first learning step (10 minutes)
+		// Failed: Reset to first learning step (30 minutes)
 		review.CurrentStep = 0
 		review.IntervalMinutes = LearningSteps[0]
 		review.Repetitions = 0

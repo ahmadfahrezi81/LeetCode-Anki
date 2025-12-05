@@ -211,7 +211,7 @@ export default function HistoryTable() {
             <Drawer open={!!selectedItem} onOpenChange={handleCloseDrawer} >
                 <DrawerContent
                     className="
-                        h-[95vh] mt-0 rounded-t-[10px] bg-gray-50
+                        h-[87vh] md:h-[95vh] mt-0 rounded-t-[10px] bg-gray-50
                         [&>*:first-child]:bg-gray-500
                     "
                 >
