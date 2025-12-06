@@ -34,6 +34,7 @@ interface SubmissionReportProps {
     question?: CardType["question"];
     onNext?: () => void;
     nextLabel?: string;
+    onClose?: () => void;
 }
 
 export default function SubmissionReport({ 
@@ -41,7 +42,8 @@ export default function SubmissionReport({
     userAnswer, 
     question, 
     onNext,
-    nextLabel = "Next Card"
+    nextLabel = "Next Card",
+    onClose
 }: SubmissionReportProps) {
     const [showQuestionInReport, setShowQuestionInReport] = useState(true);
 
@@ -107,6 +109,16 @@ export default function SubmissionReport({
                         <Trophy className="h-7 w-7 text-yellow-500" />
                         Your Learning Report
                     </h1>
+                    {onClose && (
+                        <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={onClose}
+                            className="w-12 h-12 text-gray-600 hover:text-gray-700"
+                        >
+                            <XCircle style={{ width: 30, height: 30 }} />
+                        </Button>
+                    )}
                 </div>
 
                 {/* Overall Score Card */}

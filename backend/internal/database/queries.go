@@ -356,9 +356,9 @@ func GetTodayStats(userID string) (*models.TodayStats, error) {
 		return nil, err
 	}
 
-	// Convert seconds to minutes (round up)
+	// Convert seconds to minutes (round up) and multiply by 2
 	if totalSeconds.Valid {
-		stats.TimeSpentMinutes = int((totalSeconds.Int64 + 59) / 60) // Round up
+		stats.TimeSpentMinutes = int((totalSeconds.Int64+59)/60) * 2 // Round up and multiply by 2
 	} else {
 		stats.TimeSpentMinutes = 0
 	}
