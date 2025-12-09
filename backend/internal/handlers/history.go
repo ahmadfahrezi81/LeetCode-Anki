@@ -4,6 +4,7 @@ import (
 	"leetcode-anki/backend/internal/database"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,7 +15,7 @@ func NewHistoryHandler() *HistoryHandler {
 	return &HistoryHandler{}
 }
 
-// GetHistory retrieves the user's submission history with pagination
+// GetHistory retrieves the user's submission history with pagination and filters
 func (h *HistoryHandler) GetHistory(c *gin.Context) {
 	userID := c.GetString("user_id")
 
@@ -32,7 +33,30 @@ func (h *HistoryHandler) GetHistory(c *gin.Context) {
 		offset = 0
 	}
 
-	history, err := database.GetHistoryByUser(userID, limit, offset)
+	// Parse filter params
+	var difficulties []string
+	if diffStr := c.Query("difficulty"); diffStr != "" {
+		difficulties = strings.Split(diffStr, ",")
+	}
+
+	var minScore, maxScore *int
+	if minScoreStr := c.Query("minScore"); minScoreStr != "" {
+		if val, err := strconv.Atoi(minScoreStr); err == nil && val >= 1 && val <= 5 {
+			minScore = &val
+		}
+	}
+	if maxScoreStr := c.Query("maxScore"); maxScoreStr != "" {
+		if val, err := strconv.Atoi(maxScoreStr); err == nil && val >= 1 && val <= 5 {
+			maxScore = &val
+		}
+	}
+
+	var states []string
+	if stateStr := c.Query("state"); stateStr != "" {
+		states = strings.Split(stateStr, ",")
+	}
+
+	history, err := database.GetHistoryByUser(userID, limit, offset, difficulties, minScore, maxScore, states)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch history"})
 		return

@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"leetcode-anki/backend/internal/models"
+	"strconv"
 	"time"
 
 	"github.com/lib/pq"
@@ -607,8 +608,9 @@ func CreateHistory(history *models.History) error {
 	).Scan(&history.ID, &history.CreatedAt)
 }
 
-// GetHistoryByUser retrieves all history for a user (paginated)
-func GetHistoryByUser(userID string, limit, offset int) ([]models.History, error) {
+// GetHistoryByUser retrieves all history for a user (paginated with optional filters)
+func GetHistoryByUser(userID string, limit, offset int, difficulties []string, minScore, maxScore *int, states []string) ([]models.History, error) {
+	// Build dynamic query with filters
 	query := `
 		SELECT 
 			h.id, h.user_id, h.question_id, h.user_answer, h.submitted_at,
@@ -620,11 +622,47 @@ func GetHistoryByUser(userID string, limit, offset int) ([]models.History, error
 		FROM history h
 		JOIN questions q ON h.question_id = q.id
 		WHERE h.user_id = $1
-		ORDER BY h.submitted_at DESC
-		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := DB.Query(query, userID, limit, offset)
+	args := []interface{}{userID}
+	paramCount := 1
+
+	// Add difficulty filter
+	if len(difficulties) > 0 {
+		paramCount++
+		query += " AND q.difficulty = ANY($" + strconv.Itoa(paramCount) + ")"
+		args = append(args, pq.Array(difficulties))
+	}
+
+	// Add score filters
+	if minScore != nil {
+		paramCount++
+		query += " AND h.score >= $" + strconv.Itoa(paramCount)
+		args = append(args, *minScore)
+	}
+	if maxScore != nil {
+		paramCount++
+		query += " AND h.score <= $" + strconv.Itoa(paramCount)
+		args = append(args, *maxScore)
+	}
+
+	// Add state filter
+	if len(states) > 0 {
+		paramCount++
+		query += " AND h.card_state = ANY($" + strconv.Itoa(paramCount) + ")"
+		args = append(args, pq.Array(states))
+	}
+
+	// Add ordering and pagination
+	query += " ORDER BY h.submitted_at DESC"
+	paramCount++
+	query += " LIMIT $" + strconv.Itoa(paramCount)
+	args = append(args, limit)
+	paramCount++
+	query += " OFFSET $" + strconv.Itoa(paramCount)
+	args = append(args, offset)
+
+	rows, err := DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

@@ -89,8 +89,35 @@ export const api = {
     getProblemStats: () => apiRequest("/api/admin/problem-stats"),
 
     // History
-    getHistory: (limit = 20, offset = 0): Promise<{ data: History[]; limit: number; offset: number }> =>
-        apiRequest<{ data: History[]; limit: number; offset: number }>(`/api/history?limit=${limit}&offset=${offset}`),
+    getHistory: (
+        limit = 20, 
+        offset = 0,
+        filters?: {
+            difficulties?: string[];
+            minScore?: number;
+            maxScore?: number;
+            states?: string[];
+        }
+    ): Promise<{ data: History[]; limit: number; offset: number }> => {
+        let url = `/api/history?limit=${limit}&offset=${offset}`;
+        
+        if (filters) {
+            if (filters.difficulties && filters.difficulties.length > 0) {
+                url += `&difficulty=${filters.difficulties.join(',')}`;
+            }
+            if (filters.minScore !== undefined) {
+                url += `&minScore=${filters.minScore}`;
+            }
+            if (filters.maxScore !== undefined) {
+                url += `&maxScore=${filters.maxScore}`;
+            }
+            if (filters.states && filters.states.length > 0) {
+                url += `&state=${filters.states.join(',')}`;
+            }
+        }
+        
+        return apiRequest<{ data: History[]; limit: number; offset: number }>(url);
+    },
 
     // Questions
     getQuestionById: (questionId: string): Promise<{ question: Question }> =>
