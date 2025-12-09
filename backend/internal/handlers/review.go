@@ -183,29 +183,72 @@ func (h *ReviewHandler) SubmitAnswer(c *gin.Context) {
 		return
 	}
 
-	// Score the answer using LLM
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	score, feedback, correctApproach, subScores, solutionBreakdown, err := h.llmService.ScoreAnswer(
-		ctx,
-		question.Title,
-		question.DescriptionMarkdown,
-		req.Answer,
-	)
+	var score int
+	var feedback string
+	var correctApproach string
+	var subScores *models.SubScores
+	var solutionBreakdown *models.SolutionBreakdown
 
-	// ADD THIS LOGGING:
-	log.Printf("🔍 LLM Response:")
-	log.Printf("   Score: %d", score)
-	log.Printf("   SubScores: %+v", subScores)
-	log.Printf("   SolutionBreakdown: %+v", solutionBreakdown)
-	log.Printf("   Error: %v", err)
+	// 🚀 OPTIMIZATION: Check if we have cached solution breakdown
+	if question.SolutionBreakdown != nil {
+		// ⚡ FAST PATH: Use cached solution, only score and provide feedback (~3-5s)
+		log.Printf("⚡ Using cached solution for question %s - FAST scoring", question.ID)
 
-	if err != nil {
-		log.Printf("❌ LLM ERROR: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to score answer: %v", err)})
-		return
+		score, feedback, subScores, err = h.llmService.ScoreAnswerOnly(
+			ctx,
+			question.Title,
+			question.DescriptionMarkdown,
+			req.Answer,
+			question.SolutionBreakdown,
+		)
+
+		if err != nil {
+			log.Printf("❌ Fast LLM ERROR: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to score answer: %v", err)})
+			return
+		}
+
+		// Use cached solution breakdown
+		solutionBreakdown = question.SolutionBreakdown
+		correctApproach = solutionBreakdown.Pattern + ": " + solutionBreakdown.WhyThisPattern
+
+		log.Printf("⚡ Fast scoring complete in ~3-5s")
+	} else {
+		// 🐢 SLOW PATH: First time seeing this question, generate full solution (~16s)
+		log.Printf("🔄 No cached solution for question %s - FULL scoring and caching", question.ID)
+
+		score, feedback, correctApproach, subScores, solutionBreakdown, err = h.llmService.ScoreAnswer(
+			ctx,
+			question.Title,
+			question.DescriptionMarkdown,
+			req.Answer,
+		)
+
+		if err != nil {
+			log.Printf("❌ LLM ERROR: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to score answer: %v", err)})
+			return
+		}
+
+		// 💾 Cache the solution breakdown for future use
+		if solutionBreakdown != nil {
+			if err := database.UpdateQuestionSolution(question.ID, solutionBreakdown); err != nil {
+				log.Printf("⚠️ Failed to cache solution breakdown: %v", err)
+				// Don't fail the request, just log the error
+			} else {
+				log.Printf("✅ Solution breakdown cached for question %s", question.ID)
+			}
+		}
+
+		log.Printf("🐢 Full scoring complete in ~16s")
 	}
+
+	log.Printf("📊 Score: %d", score)
+	log.Printf("📝 Feedback: %s", feedback)
+	log.Printf("📈 SubScores: %+v", subScores)
 
 	// Update review using SM-2 algorithm
 	h.srsService.CalculateNextReview(review, score)

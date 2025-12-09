@@ -102,6 +102,55 @@ func (l *LLMService) ScoreAnswer(ctx context.Context, questionTitle, questionDes
 	return score, feedback, correctApproach, subScores, solutionBreakdown, nil
 }
 
+// ScoreAnswerOnly scores the user's answer and provides feedback WITHOUT generating solution breakdown
+// This is MUCH faster (~3-5s vs ~16s) for repeat cards where we already have the solution cached
+func (l *LLMService) ScoreAnswerOnly(ctx context.Context, questionTitle, questionDescription, userAnswer string, cachedSolution *models.SolutionBreakdown) (int, string, *models.SubScores, error) {
+	prompt := l.buildFastScoringPrompt(questionTitle, questionDescription, userAnswer, cachedSolution)
+
+	resp, err := l.client.CreateChatCompletion(
+		ctx,
+		openai.ChatCompletionRequest{
+			Model: openai.GPT4oMini,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleSystem,
+					Content: "You are an expert algorithm tutor. You provide concise, focused feedback in JSON format.",
+				},
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: prompt,
+				},
+			},
+			Temperature: 0.1,
+			MaxTokens:   800, // Much smaller since we're not generating solution breakdown
+		},
+	)
+
+	if err != nil {
+		return 0, "", nil, fmt.Errorf("OpenAI API error: %w", err)
+	}
+
+	if len(resp.Choices) == 0 {
+		return 0, "", nil, fmt.Errorf("no response from OpenAI")
+	}
+
+	response := resp.Choices[0].Message.Content
+	log.Printf("🤖 Fast LLM Response:\n%s\n", response)
+
+	// Parse the simplified JSON response
+	score, feedback, subScores, err := l.parseFastJSONResponse(response)
+	if err != nil {
+		log.Printf("❌ Failed to parse fast LLM response: %v", err)
+		return 0, "", nil, fmt.Errorf("failed to parse LLM response: %w", err)
+	}
+
+	log.Printf("⚡ Fast Score: %d", score)
+	log.Printf("📝 Feedback: %s", feedback)
+	log.Printf("📈 SubScores: %+v", subScores)
+
+	return score, feedback, subScores, nil
+}
+
 func (l *LLMService) buildScoringPrompt(questionTitle, questionDescription, userAnswer string) string {
 	return fmt.Sprintf(`You are evaluating a student's understanding of algorithm problem-solving.
 
@@ -175,6 +224,58 @@ Evaluate the student's understanding and provide comprehensive, pedagogical feed
 }`, questionTitle, questionDescription, userAnswer)
 }
 
+// buildFastScoringPrompt creates a focused prompt for scoring only (no solution generation)
+func (l *LLMService) buildFastScoringPrompt(questionTitle, questionDescription, userAnswer string, cachedSolution *models.SolutionBreakdown) string {
+	return fmt.Sprintf(`You are evaluating a student's understanding of algorithm problem-solving.
+
+**Problem:** %s
+
+**Problem Description:**
+%s
+
+**Student's Explanation:**
+%s
+
+**Correct Solution Pattern:** %s
+
+---
+
+**Your Task:**
+Evaluate the student's understanding and provide FOCUSED feedback. The solution breakdown is already known, so ONLY provide scoring and feedback.
+
+**Evaluation Criteria:**
+
+1. **Overall Score (0-5):**
+   - 5: Perfect understanding
+   - 4: Strong understanding, minor gaps
+   - 3: Acceptable, some conceptual gaps
+   - 2: Weak, flawed approach
+   - 1: Poor, incorrect approach
+   - 0: No understanding
+
+2. **Sub-Scores (each 0-5):**
+   - Pattern Recognition
+   - Algorithmic Correctness
+   - Complexity Understanding
+   - Edge Case Awareness
+
+3. **Feedback:** 2-3 paragraphs covering what they got right, what they missed, and how to improve.
+
+**CRITICAL: You must respond with ONLY valid JSON. No markdown, no backticks, no preamble. Just pure JSON.**
+
+**Output Format:**
+{
+  "score": <0-5>,
+  "sub_scores": {
+    "pattern_recognition": <0-5>,
+    "algorithmic_correctness": <0-5>,
+    "complexity_understanding": <0-5>,
+    "edge_case_awareness": <0-5>
+  },
+  "feedback": "<Multi-paragraph detailed feedback here>"
+}`, questionTitle, questionDescription, userAnswer, cachedSolution.Pattern)
+}
+
 func (l *LLMService) parseJSONResponse(response string) (int, string, string, *models.SubScores, *models.SolutionBreakdown, error) {
 	// Clean up potential markdown formatting
 	cleaned := cleanJSONResponse(response)
@@ -218,6 +319,36 @@ func (l *LLMService) parseJSONResponse(response string) (int, string, string, *m
 	}
 
 	return score, llmResp.Feedback, llmResp.Solution.CorrectApproach, subScores, solutionBreakdown, nil
+}
+
+// FastLLMResponse for the simplified scoring-only response
+type FastLLMResponse struct {
+	Score     int           `json:"score"`
+	SubScores SubScoresJSON `json:"sub_scores"`
+	Feedback  string        `json:"feedback"`
+}
+
+// parseFastJSONResponse parses the simplified JSON response (no solution breakdown)
+func (l *LLMService) parseFastJSONResponse(response string) (int, string, *models.SubScores, error) {
+	// Clean up potential markdown formatting
+	cleaned := cleanJSONResponse(response)
+
+	var llmResp FastLLMResponse
+	if err := json.Unmarshal([]byte(cleaned), &llmResp); err != nil {
+		return 0, "", nil, fmt.Errorf("JSON unmarshal error: %w", err)
+	}
+
+	// Validate and clamp scores
+	score := clampScore(llmResp.Score)
+
+	subScores := &models.SubScores{
+		PatternRecognition:      clampScore(llmResp.SubScores.PatternRecognition),
+		AlgorithmicCorrectness:  clampScore(llmResp.SubScores.AlgorithmicCorrectness),
+		ComplexityUnderstanding: clampScore(llmResp.SubScores.ComplexityUnderstanding),
+		EdgeCaseAwareness:       clampScore(llmResp.SubScores.EdgeCaseAwareness),
+	}
+
+	return score, llmResp.Feedback, subScores, nil
 }
 
 // cleanJSONResponse removes markdown code fences and extra whitespace

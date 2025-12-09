@@ -6,14 +6,15 @@ import (
 
 // Question represents a LeetCode problem
 type Question struct {
-	ID                  string    `json:"id"`
-	LeetcodeID          int       `json:"leetcode_id"`
-	Title               string    `json:"title"`
-	Slug                string    `json:"slug"`
-	Difficulty          string    `json:"difficulty"`
-	DescriptionMarkdown string    `json:"description_markdown"`
-	Topics              []string  `json:"topics"`
-	CreatedAt           time.Time `json:"created_at"`
+	ID                  string             `json:"id"`
+	LeetcodeID          int                `json:"leetcode_id"`
+	Title               string             `json:"title"`
+	Slug                string             `json:"slug"`
+	Difficulty          string             `json:"difficulty"`
+	DescriptionMarkdown string             `json:"description_markdown"`
+	Topics              []string           `json:"topics"`
+	SolutionBreakdown   *SolutionBreakdown `json:"solution_breakdown,omitempty"` // Cached solution from LLM
+	CreatedAt           time.Time          `json:"created_at"`
 }
 
 // Review represents a user's review card

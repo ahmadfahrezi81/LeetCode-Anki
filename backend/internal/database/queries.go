@@ -13,17 +13,18 @@ import (
 func GetQuestionByID(questionID string) (*models.Question, error) {
 	query := `
 		SELECT id, leetcode_id, title, slug, difficulty, 
-		       description_markdown, topics, created_at
+		       description_markdown, topics, solution_breakdown, created_at
 		FROM questions
 		WHERE id = $1
 	`
 
 	var q models.Question
 	var topics pq.StringArray
+	var solutionBreakdownJSON []byte
 
 	err := DB.QueryRow(query, questionID).Scan(
 		&q.ID, &q.LeetcodeID, &q.Title, &q.Slug, &q.Difficulty,
-		&q.DescriptionMarkdown, &topics, &q.CreatedAt,
+		&q.DescriptionMarkdown, &topics, &solutionBreakdownJSON, &q.CreatedAt,
 	)
 
 	if err != nil {
@@ -31,7 +32,33 @@ func GetQuestionByID(questionID string) (*models.Question, error) {
 	}
 
 	q.Topics = topics
+
+	// Unmarshal solution breakdown if it exists
+	if len(solutionBreakdownJSON) > 0 {
+		if err := jsonUnmarshal(solutionBreakdownJSON, &q.SolutionBreakdown); err != nil {
+			// Don't fail the query if solution breakdown is corrupted, just log it
+			// log.Printf("Warning: Failed to unmarshal solution breakdown for question %s: %v", questionID, err)
+		}
+	}
+
 	return &q, nil
+}
+
+// UpdateQuestionSolution updates the cached solution breakdown for a question
+func UpdateQuestionSolution(questionID string, solution *models.SolutionBreakdown) error {
+	query := `
+		UPDATE questions
+		SET solution_breakdown = $1
+		WHERE id = $2
+	`
+
+	solutionJSON, err := jsonMarshal(solution)
+	if err != nil {
+		return err
+	}
+
+	_, err = DB.Exec(query, solutionJSON, questionID)
+	return err
 }
 
 // GetReview retrieves a review record (handles nullable fields properly)
