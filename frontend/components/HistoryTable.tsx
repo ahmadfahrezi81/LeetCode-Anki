@@ -65,17 +65,21 @@ export default function HistoryTable() {
     });
 
     const observerTarget = useRef<HTMLDivElement>(null);
+    const isLoadingMoreRef = useRef(false);
 
     // Load history when page or applied filters change
     useEffect(() => {
-        loadHistory(page === 0);
+        loadHistory();
     }, [page, appliedFilters]);
 
-    const loadHistory = async (reset: boolean) => {
-        if (reset) {
-            setLoading(true);
-        } else {
+    const loadHistory = async () => {
+        const shouldAppend = isLoadingMoreRef.current;
+        isLoadingMoreRef.current = false; // Reset the flag
+        
+        if (shouldAppend) {
             setLoadingMore(true);
+        } else {
+            setLoading(true);
         }
         
         try {
@@ -106,10 +110,10 @@ export default function HistoryTable() {
             );
             const data = res.data || [];
             
-            if (reset) {
-                setHistory(data);
-            } else {
+            if (shouldAppend) {
                 setHistory(prev => [...prev, ...data]);
+            } else {
+                setHistory(data);
             }
             
             setHasMore(data.length === limit);
@@ -123,6 +127,7 @@ export default function HistoryTable() {
 
     const loadMore = () => {
         if (!loadingMore && hasMore && !loading) {
+            isLoadingMoreRef.current = true; // Set flag before incrementing page
             setPage(p => p + 1);
         }
     };
@@ -398,7 +403,7 @@ export default function HistoryTable() {
                                 {history.map((item) => (
                                     <div
                                         key={item.id}
-                                        className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98]"
+                                        className="bg-white border border-gray-200 rounded-xl p-4 active:scale-[0.98]"
                                         onClick={() => handleViewDetails(item)}
                                     >
                                         <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
