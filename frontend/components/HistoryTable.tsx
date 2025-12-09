@@ -248,7 +248,7 @@ export default function HistoryTable() {
 
     return (
         <>
-            <Card className="border-0 shadow-sm bg-white">
+            <Card className="border-0 shadow-sm bg-white py-4 gap-4">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <HistoryIcon className="h-5 w-5 text-gray-500" />
