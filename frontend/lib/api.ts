@@ -77,6 +77,15 @@ export const api = {
             body: JSON.stringify({ question_id: questionId }),
         }),
 
+    getSolutionBreakdown: (questionId: string): Promise<{
+        solution_breakdown: any;
+        cached: boolean;
+    }> =>
+        apiRequest<{
+            solution_breakdown: any;
+            cached: boolean;
+        }>(`/api/review/solution/${questionId}`),
+
     // Admin
     refreshProblems: (easy = 5, medium = 10, hard = 5) =>
         apiRequest(

@@ -14,6 +14,8 @@ import FeedbackOverlay from "@/components/FeedbackOverlay";
 import QuestionCard from "@/components/QuestionCard";
 import AnswerInput from "@/components/AnswerInput";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { Toast } from "@/components/ui/toast";
+import { useSolutionLoading } from "@/hooks/useSolutionLoading";
 
 export default function StudyPage() {
     const router = useRouter();
@@ -28,6 +30,14 @@ export default function StudyPage() {
     const [cardLoadTime, setCardLoadTime] = useState<number>(Date.now());
     const [showFeedbackOverlay, setShowFeedbackOverlay] = useState(false);
     const [feedbackType, setFeedbackType] = useState<'success' | 'failure' | null>(null);
+    
+    // Toast state
+    const [toastMessage, setToastMessage] = useState("");
+    const [toastType, setToastType] = useState<"success" | "error" | "info" | "loading">("info");
+    const [showToast, setShowToast] = useState(false);
+    
+    // Solution loading state
+    const { isLoading: solutionLoading, progress: solutionProgress, startLoading, completeLoading, resetLoading } = useSolutionLoading();
 
     // Voice recording hook
     const { isRecording, isTranscribing, startRecording, stopRecording } = useVoiceRecorder(
@@ -79,9 +89,20 @@ export default function StudyPage() {
         const timeSpentSeconds = Math.floor((Date.now() - cardLoadTime) / 1000);
 
         setSubmitting(true);
+        setToastMessage("Analyzing your answer...");
+        setToastType("loading");
+        setShowToast(true);
+        
         try {
             const response = await api.submitAnswer(card.question.id, answer, timeSpentSeconds);
+            
+            // Store the initial response (without solution breakdown or with cached one)
             setResult(response);
+            
+            // Update toast to success
+            setToastMessage("Analysis complete!");
+            setToastType("success");
+            setTimeout(() => setShowToast(false), 2000);
             
             // Determine feedback type and show overlay
             setFeedbackType(response.score >= 4 ? 'success' : 'failure');
@@ -92,13 +113,55 @@ export default function StudyPage() {
                 setShowFeedbackOverlay(false);
                 setTimeout(() => {
                     setShowResult(true);
+                    
+                    // If solution breakdown is not in the response, fetch it separately
+                    if (!response.solution_breakdown) {
+                        fetchSolutionBreakdown(card.question.id);
+                    }
                 }, 300);
             }, 3000);
         } catch (err) {
             console.error("Failed to submit answer:", err);
+            
+            setToastMessage("Failed to submit answer. Please try again.");
+            setToastType("error");
+            setTimeout(() => setShowToast(false), 3000);
+            
             alert("Failed to submit answer. Please try again.");
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const fetchSolutionBreakdown = async (questionId: string) => {
+        // Start loading animation
+        startLoading();
+        setToastMessage("Loading solution breakdown...");
+        setToastType("loading");
+        setShowToast(true);
+        
+        try {
+            const { solution_breakdown, cached } = await api.getSolutionBreakdown(questionId);
+            
+            // Update the result with the solution breakdown
+            setResult(prev => prev ? {
+                ...prev,
+                solution_breakdown
+            } : null);
+            
+            // Complete loading
+            completeLoading();
+            
+            // Update toast
+            setToastMessage(cached ? "Solution loaded!" : "Solution generated!");
+            setToastType("success");
+            setTimeout(() => setShowToast(false), 2000);
+        } catch (err) {
+            console.error("Failed to fetch solution breakdown:", err);
+            resetLoading();
+            setToastMessage("Failed to load solution breakdown");
+            setToastType("error");
+            setTimeout(() => setShowToast(false), 3000);
         }
     };
 
@@ -122,6 +185,7 @@ export default function StudyPage() {
         setAnswer("");
         setResult(null);
         setShowResult(false);
+        resetLoading();
         loadCard();
     };
 
@@ -162,22 +226,38 @@ export default function StudyPage() {
     // If showing result, render the feedback page
     if (showResult && result) {
         return (
-            <div className="p-4 min-h-screen bg-gray-50">
-                <SubmissionReport 
-                    result={result} 
-                    userAnswer={answer} 
-                    question={card.question} 
-                    onNext={handleNext}
-                    nextLabel="Continue Learning"
-                    onClose={() => router.push("/")}
+            <>
+                <Toast 
+                    show={showToast} 
+                    message={toastMessage} 
+                    type={toastType}
+                    onClose={() => setShowToast(false)}
                 />
-            </div>
+                <div className="p-4 min-h-screen bg-gray-50">
+                    <SubmissionReport 
+                        result={result} 
+                        userAnswer={answer} 
+                        question={card.question} 
+                        onNext={handleNext}
+                        nextLabel="Continue Learning"
+                        onClose={() => router.push("/")}
+                        solutionLoading={solutionLoading}
+                        solutionProgress={solutionProgress}
+                    />
+                </div>
+            </>
         );
     }
 
     // Original question view
     return (
         <>
+            <Toast 
+                show={showToast} 
+                message={toastMessage} 
+                type={toastType}
+                onClose={() => setShowToast(false)}
+            />
             {result && feedbackType && (
                 <FeedbackOverlay 
                     show={showFeedbackOverlay}

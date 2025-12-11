@@ -68,6 +68,7 @@ func main() {
 		api.GET("/card/next", reviewHandler.GetNextCard)
 		api.POST("/review/submit", reviewHandler.SubmitAnswer)
 		api.POST("/review/skip", reviewHandler.SkipCard)
+		api.GET("/review/solution/:questionId", reviewHandler.GetSolutionBreakdown)
 
 		// Questions
 		api.GET("/questions/:id", questionsHandler.GetQuestionDetail)

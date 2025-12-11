@@ -428,3 +428,58 @@ func formatDuration(d time.Duration) string {
 	}
 	return fmt.Sprintf("%d days", days)
 }
+
+// GetSolutionBreakdown returns the solution breakdown for a question
+// If not cached, it generates it in the background
+func (h *ReviewHandler) GetSolutionBreakdown(c *gin.Context) {
+	questionID := c.Param("questionId")
+
+	// Get question
+	question, err := database.GetQuestionByID(questionID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Question not found"})
+		return
+	}
+
+	// If we have cached solution, return it immediately
+	if question.SolutionBreakdown != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"solution_breakdown": question.SolutionBreakdown,
+			"cached":             true,
+		})
+		return
+	}
+
+	// No cached solution - generate it now
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+
+	log.Printf("🔄 Generating solution breakdown for question %s", question.ID)
+
+	_, _, _, _, solutionBreakdown, err := h.llmService.ScoreAnswer(
+		ctx,
+		question.Title,
+		question.DescriptionMarkdown,
+		"", // Empty answer - we just want the solution
+	)
+
+	if err != nil {
+		log.Printf("❌ Failed to generate solution breakdown: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate solution breakdown"})
+		return
+	}
+
+	// Cache the solution for future use
+	if solutionBreakdown != nil {
+		if err := database.UpdateQuestionSolution(question.ID, solutionBreakdown); err != nil {
+			log.Printf("⚠️ Failed to cache solution breakdown: %v", err)
+		} else {
+			log.Printf("✅ Solution breakdown generated and cached for question %s", question.ID)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"solution_breakdown": solutionBreakdown,
+		"cached":             false,
+	})
+}

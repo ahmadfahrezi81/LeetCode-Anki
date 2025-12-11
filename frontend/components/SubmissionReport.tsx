@@ -27,6 +27,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { SubmitAnswerResponse, History, Card as CardType } from "@/types";
+import { SolutionSkeleton } from "@/components/SolutionSkeleton";
 
 interface SubmissionReportProps {
     result: SubmitAnswerResponse | History;
@@ -35,6 +36,8 @@ interface SubmissionReportProps {
     onNext?: () => void;
     nextLabel?: string;
     onClose?: () => void;
+    solutionLoading?: boolean;
+    solutionProgress?: number;
 }
 
 export default function SubmissionReport({ 
@@ -43,7 +46,9 @@ export default function SubmissionReport({
     question, 
     onNext,
     nextLabel = "Next Card",
-    onClose
+    onClose,
+    solutionLoading = false,
+    solutionProgress = 0,
 }: SubmissionReportProps) {
     const [showQuestionInReport, setShowQuestionInReport] = useState(true);
 
@@ -383,116 +388,124 @@ export default function SubmissionReport({
                 )}
 
                 {/* Solution Breakdown */}
-                {result.solution_breakdown && (
-                    <Card className="mb-6">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <Code className="h-5 w-5 text-purple-600" />
-                                Complete Solution Breakdown
-                            </CardTitle>
-                            <CardDescription>
-                                Learn the optimal approach step-by-step
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {/* Pattern */}
-                            <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Zap className="h-4 w-4 text-blue-600" />
-                                    <h3 className="font-semibold text-gray-900">Pattern</h3>
-                                </div>
-                                <p className="font-medium text-blue-600 bg-blue-50 px-3 py-2 rounded-lg inline-block text-xs border-1 border-blue-600">
-                                    {result.solution_breakdown.pattern}
-                                </p>
-                            </div>
-
-                            {/* Why This Pattern */}
-                            <div>
-                                <h3 className="font-semibold text-gray-900 mb-2">Why This Pattern?</h3>
-                                <p className="text-gray-700 leading-relaxed">
-                                    {result.solution_breakdown.why_this_pattern}
-                                </p>
-                            </div>
-
-                            {/* Approach Steps */}
-                            <div>
-                                <h3 className="font-semibold text-gray-900 mb-3">Algorithm Steps</h3>
-                                <ol className="space-y-2">
-                                    {result.solution_breakdown.approach_steps.map((step, index) => (
-                                        <li key={index} className="flex gap-3">
-                                            <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">
-                                                {index + 1}
-                                            </span>
-                                            <span className="text-gray-700 leading-relaxed pt-0.5">{step}</span>
-                                        </li>
-                                    ))}
-                                </ol>
-                            </div>
-
-                            {/* Pseudocode */}
-                            <div>
-                                <h3 className="font-semibold text-gray-900 mb-3">Pseudocode</h3>
-                                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
-                                    <code>{result.solution_breakdown.pseudocode}</code>
-                                </pre>
-                            </div>
-
-                            {/* Complexity Analysis */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                                    <p className="text-sm text-purple-700 font-medium mb-1">Time Complexity</p>
-                                    <p className="text-2xl font-bold text-purple-900">{result.solution_breakdown.time_complexity}</p>
-                                </div>
-                                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                                    <p className="text-sm text-indigo-700 font-medium mb-1">Space Complexity</p>
-                                    <p className="text-2xl font-bold text-indigo-900">{result.solution_breakdown.space_complexity}</p>
-                                </div>
-                            </div>
-                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                <p className="text-sm font-medium text-gray-900 mb-2">Complexity Explanation</p>
-                                <p className="text-gray-700 leading-relaxed">
-                                    {result.solution_breakdown.complexity_explanation}
-                                </p>
-                            </div>
-
-                            {/* Key Insights */}
-                            {result.solution_breakdown.key_insights.length > 0 && (
+                {solutionLoading ? (
+                    <SolutionSkeleton progress={solutionProgress} />
+                ) : result.solution_breakdown ? (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                    >
+                        <Card className="mb-6">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                    <Code className="h-5 w-5 text-purple-600" />
+                                    Complete Solution Breakdown
+                                </CardTitle>
+                                <CardDescription>
+                                    Learn the optimal approach step-by-step
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {/* Pattern */}
                                 <div>
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <TrendingUp className="h-4 w-4 text-green-600" />
-                                        <h3 className="font-semibold text-gray-900">Key Insights</h3>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Zap className="h-4 w-4 text-blue-600" />
+                                        <h3 className="font-semibold text-gray-900">Pattern</h3>
                                     </div>
-                                    <ul className="space-y-2">
-                                        {result.solution_breakdown.key_insights.map((insight, index) => (
-                                            <li key={index} className="flex gap-2 items-start">
-                                                <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                                                <span className="text-gray-700 leading-relaxed">{insight}</span>
+                                    <p className="font-medium text-blue-600 bg-blue-50 px-3 py-2 rounded-lg inline-block text-xs border-1 border-blue-600">
+                                        {result.solution_breakdown.pattern}
+                                    </p>
+                                </div>
+
+                                {/* Why This Pattern */}
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-2">Why This Pattern?</h3>
+                                    <p className="text-gray-700 leading-relaxed">
+                                        {result.solution_breakdown.why_this_pattern}
+                                    </p>
+                                </div>
+
+                                {/* Approach Steps */}
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-3">Algorithm Steps</h3>
+                                    <ol className="space-y-2">
+                                        {result.solution_breakdown.approach_steps.map((step, index) => (
+                                            <li key={index} className="flex gap-3">
+                                                <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">
+                                                    {index + 1}
+                                                </span>
+                                                <span className="text-gray-700 leading-relaxed pt-0.5">{step}</span>
                                             </li>
                                         ))}
-                                    </ul>
+                                    </ol>
                                 </div>
-                            )}
 
-                            {/* Common Pitfalls */}
-                            {result.solution_breakdown.common_pitfalls.length > 0 && (
+                                {/* Pseudocode */}
                                 <div>
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <AlertTriangle className="h-4 w-4 text-orange-600" />
-                                        <h3 className="font-semibold text-gray-900">Common Pitfalls</h3>
-                                    </div>
-                                    <ul className="space-y-2">
-                                        {result.solution_breakdown.common_pitfalls.map((pitfall, index) => (
-                                            <li key={index} className="flex gap-2 items-start">
-                                                <XCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                                                <span className="text-gray-700 leading-relaxed">{pitfall}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
+                                    <h3 className="font-semibold text-gray-900 mb-3">Pseudocode</h3>
+                                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+                                        <code>{result.solution_breakdown.pseudocode}</code>
+                                    </pre>
                                 </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
+
+                                {/* Complexity Analysis */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                        <p className="text-sm text-purple-700 font-medium mb-1">Time Complexity</p>
+                                        <p className="text-2xl font-bold text-purple-900">{result.solution_breakdown.time_complexity}</p>
+                                    </div>
+                                    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                                        <p className="text-sm text-indigo-700 font-medium mb-1">Space Complexity</p>
+                                        <p className="text-2xl font-bold text-indigo-900">{result.solution_breakdown.space_complexity}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                    <p className="text-sm font-medium text-gray-900 mb-2">Complexity Explanation</p>
+                                    <p className="text-gray-700 leading-relaxed">
+                                        {result.solution_breakdown.complexity_explanation}
+                                    </p>
+                                </div>
+
+                                {/* Key Insights */}
+                                {result.solution_breakdown.key_insights.length > 0 && (
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <TrendingUp className="h-4 w-4 text-green-600" />
+                                            <h3 className="font-semibold text-gray-900">Key Insights</h3>
+                                        </div>
+                                        <ul className="space-y-2">
+                                            {result.solution_breakdown.key_insights.map((insight, index) => (
+                                                <li key={index} className="flex gap-2 items-start">
+                                                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                                                    <span className="text-gray-700 leading-relaxed">{insight}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {/* Common Pitfalls */}
+                                {result.solution_breakdown.common_pitfalls.length > 0 && (
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <AlertTriangle className="h-4 w-4 text-orange-600" />
+                                            <h3 className="font-semibold text-gray-900">Common Pitfalls</h3>
+                                        </div>
+                                        <ul className="space-y-2">
+                                            {result.solution_breakdown.common_pitfalls.map((pitfall, index) => (
+                                                <li key={index} className="flex gap-2 items-start">
+                                                    <XCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                                                    <span className="text-gray-700 leading-relaxed">{pitfall}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                ) : null}
 
                 {/* Next Card Button */}
                 {onNext && (
