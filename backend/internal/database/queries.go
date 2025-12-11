@@ -558,7 +558,7 @@ func GetDueReviewCount(userID string) (int, error) {
 func GetUserStats(userID string) (*models.UserStats, error) {
 	query := `
 		SELECT user_id, total_cards, new_cards, learning_cards, 
-		       review_cards, mature_cards, updated_at
+		       review_cards, mature_cards, coins, updated_at
 		FROM user_stats
 		WHERE user_id = $1
 	`
@@ -567,7 +567,7 @@ func GetUserStats(userID string) (*models.UserStats, error) {
 	err := DB.QueryRow(query, userID).Scan(
 		&stats.UserID, &stats.TotalCards, &stats.NewCards,
 		&stats.LearningCards, &stats.ReviewCards, &stats.MatureCards,
-		&stats.UpdatedAt,
+		&stats.Coins, &stats.UpdatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -585,16 +585,16 @@ func GetUserStats(userID string) (*models.UserStats, error) {
 // CreateUserStats initializes stats for a new user
 func CreateUserStats(userID string) (*models.UserStats, error) {
 	query := `
-		INSERT INTO user_stats (user_id, total_cards, new_cards, learning_cards, review_cards, mature_cards)
-		VALUES ($1, 0, 0, 0, 0, 0)
-		RETURNING user_id, total_cards, new_cards, learning_cards, review_cards, mature_cards, updated_at
+		INSERT INTO user_stats (user_id, total_cards, new_cards, learning_cards, review_cards, mature_cards, coins)
+		VALUES ($1, 0, 0, 0, 0, 0, 0)
+		RETURNING user_id, total_cards, new_cards, learning_cards, review_cards, mature_cards, coins, updated_at
 	`
 
 	var stats models.UserStats
 	err := DB.QueryRow(query, userID).Scan(
 		&stats.UserID, &stats.TotalCards, &stats.NewCards,
 		&stats.LearningCards, &stats.ReviewCards, &stats.MatureCards,
-		&stats.UpdatedAt,
+		&stats.Coins, &stats.UpdatedAt,
 	)
 
 	return &stats, err

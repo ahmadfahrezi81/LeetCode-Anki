@@ -273,6 +273,10 @@ func (h *ReviewHandler) SubmitAnswer(c *gin.Context) {
 	log.Printf("📝 Feedback: %s", feedback)
 	log.Printf("📈 SubScores: %+v", subScores)
 
+	// Capture state BEFORE calculation to check for graduation
+	wasLearning := review.CardState == "learning" || review.CardState == "relearning" || review.CardState == "new"
+	wasMature := review.CardState == "review" && review.IntervalDays > 21
+
 	// Update review using SM-2 algorithm
 	h.srsService.CalculateNextReview(review, score)
 
@@ -281,6 +285,47 @@ func (h *ReviewHandler) SubmitAnswer(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update review"})
 		return
+	}
+
+	// GAMIFICATION: Calculate Coins
+	coinsEarned := 0
+
+	// Base reward for doing a review (non-zero score)
+	if score > 0 {
+		coinsEarned += 1
+	}
+
+	// Check for bonuses
+	isNowReview := review.CardState == "review"
+	isNowMature := review.CardState == "review" && review.IntervalDays > 21
+
+	// Bonus 1: Graduation (Learning -> Review)
+	if wasLearning && isNowReview {
+		coinsEarned += 10
+		log.Printf("💰 GRADUATION BONUS: +10 coins for user %s", userID)
+	}
+
+	// Bonus 2: Maturity (Young -> Mature)
+	// We check if it WAS NOT mature and IS NOW mature
+	if !wasMature && isNowMature {
+		coinsEarned += 10
+		log.Printf("💰 MATURITY BONUS: +10 coins for user %s", userID)
+	}
+
+	// Update user coins
+	newTotalCoins := 0
+	if coinsEarned > 0 {
+		newTotalCoins, err = database.IncrementUserCoins(userID, coinsEarned)
+		if err != nil {
+			log.Printf("⚠️ Failed to update coins: %v", err)
+			// Don't fail the request, just log it. We can optionally fetch the current total if update failed.
+		}
+	} else {
+		// Just get current stats to show total
+		stats, err := database.GetUserStats(userID)
+		if err == nil {
+			newTotalCoins = stats.Coins
+		}
 	}
 
 	// Save to history
@@ -323,6 +368,8 @@ func (h *ReviewHandler) SubmitAnswer(c *gin.Context) {
 		CardState:         review.CardState,
 		IntervalMinutes:   review.IntervalMinutes,
 		IntervalDays:      review.IntervalDays,
+		CoinsEarned:       coinsEarned,
+		TotalCoins:        newTotalCoins,
 	})
 }
 

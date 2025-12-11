@@ -86,6 +86,8 @@ type SubmitAnswerResponse struct {
 	CardState         string             `json:"card_state"`
 	IntervalMinutes   int                `json:"interval_minutes"`
 	IntervalDays      int                `json:"interval_days"`
+	CoinsEarned       int                `json:"coins_earned"` // Coins earned this submission
+	TotalCoins        int                `json:"total_coins"`  // New total coin balance
 }
 
 // SubScores provides granular feedback on different aspects
@@ -117,6 +119,7 @@ type UserStats struct {
 	LearningCards int       `json:"learning_cards"`
 	ReviewCards   int       `json:"review_cards"`
 	MatureCards   int       `json:"mature_cards"`
+	Coins         int       `json:"coins"` // Coins earned from gamification
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 

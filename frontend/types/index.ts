@@ -44,6 +44,7 @@ export interface UserStats {
   learning_cards: number;
   review_cards: number;
   mature_cards: number;
+  coins: number;
   updated_at: string;
 }
 
@@ -131,6 +132,8 @@ export interface SubmitAnswerResponse {
   card_state: string;
   interval_minutes: number;
   interval_days: number;
+  coins_earned: number;
+  total_coins: number;
 }
 
 

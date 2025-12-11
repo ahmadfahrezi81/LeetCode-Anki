@@ -152,10 +152,21 @@ export default function DashboardPage() {
                             <p className="text-sm text-gray-500">Master algorithms efficiently</p>
                         </div>
                     </div>
-                    <Button variant="outline" onClick={handleLogout} className="gap-2">
-                        <LogOut className="h-4 w-4" />
-                        Logout
-                    </Button>
+                    <div className="flex items-center gap-4">
+                        <div className="bg-yellow-50 px-4 py-2 rounded-xl flex items-center gap-2 border border-yellow-200 shadow-sm">
+                            <div className="bg-yellow-100 p-1.5 rounded-full">
+                                <Zap className="h-4 w-4 text-yellow-600 fill-yellow-600" />
+                            </div>
+                            <div>
+                                <div className="text-sm font-bold text-gray-900">{dashboard.stats.coins}</div>
+                                <div className="text-xs text-yellow-700 font-medium">Coins</div>
+                            </div>
+                        </div>
+                        <Button variant="outline" onClick={handleLogout} className="gap-2">
+                            <LogOut className="h-4 w-4" />
+                            Logout
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Hero / Action Section */}

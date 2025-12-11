@@ -114,6 +114,25 @@ export default function SubmissionReport({
                         <Trophy className="h-7 w-7 text-yellow-500" />
                         Your Learning Report
                     </h1>
+                     {/* Coin Animation */}
+                    {'coins_earned' in result && result.coins_earned > 0 && (
+                        <div className="absolute top-20 right-4 md:right-12 z-50">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20, scale: 0.5 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                className="flex items-center gap-2 bg-yellow-100 border border-yellow-300 shadow-xl px-4 py-2 rounded-full"
+                            >
+                                <div className="bg-yellow-400 p-1.5 rounded-full text-white">
+                                    <Zap className="h-4 w-4 fill-current" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-yellow-800 font-bold text-lg">+{result.coins_earned}</span>
+                                    <span className="text-yellow-700 text-xs font-semibold uppercase tracking-wide">Coins Earned!</span>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
                     {onClose && (
                         <Button 
                             variant="ghost" 
