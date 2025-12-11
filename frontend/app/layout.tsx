@@ -14,6 +14,20 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
     title: "LeetCode Anki",
+    description: "Master LeetCode patterns with Spaced Repetition",
+    manifest: "/manifest.json",
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: "default",
+        title: "LeetCode Anki",
+    },
+    formatDetection: {
+        telephone: false,
+    },
+};
+
+export const viewport = {
+    themeColor: "#2563eb",
 };
 
 export default function RootLayout({
