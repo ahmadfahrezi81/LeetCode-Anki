@@ -595,11 +595,11 @@ export default function HistoryTable() {
             <Drawer open={!!selectedItem} onOpenChange={handleCloseDrawer}>
                 <DrawerContent
                     className="
-                        h-[87vh] md:h-[95vh] mt-0 rounded-t-[18px] bg-gray-50
+                        h-[87vh] md:h-[90vh] mt-0 rounded-t-[18px] bg-gray-50
                         [&>*:first-child]:bg-gray-500 border-none
                     "
                 >
-                    <DrawerHeader className="text-left px-4 pt-6">
+                    <DrawerHeader className="text-left pt-6 w-4xl mx-auto md:px-0">
                         <DrawerTitle>Submission Details</DrawerTitle>
                         <DrawerDescription>
                             Review your answer, score, and detailed feedback.
