@@ -31,8 +31,8 @@ export default function AnswerInput({
     onStopRecording,
 }: AnswerInputProps) {
     return (
-        <Card className="bg-white shadow-sm">
-            <CardHeader>
+        <Card className="bg-white shadow-sm py-4 md:py-6">
+            <CardHeader className="px-4 md:px-6">
                 <CardTitle className="flex items-center gap-2 text-gray-900">
                     <Lightbulb className="h-5 w-5 text-yellow-500" />
                     Explain Your Approach
@@ -41,7 +41,7 @@ export default function AnswerInput({
                     Describe the algorithm and data structures you would use to solve this problem
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 px-4 md:px-6">
                 <div className="relative">
                     <Textarea
                         placeholder="Example: I would use a hashmap to store complements. For each number, I check if target minus the current number exists in the map..."

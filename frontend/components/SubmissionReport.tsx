@@ -110,7 +110,7 @@ export default function SubmissionReport({
             <div className="mx-auto max-w-6xl">
                 {/* Header */}
                 <div className="mb-6 flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <h1 className="text-lg md:text-2xl font-bold text-gray-900 flex items-center gap-2">
                         <Trophy className="h-7 w-7 text-yellow-500" />
                         Your Learning Report
                     </h1>
@@ -186,7 +186,7 @@ export default function SubmissionReport({
                                 Your Answer
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="px-4 md:px-6">
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                                 <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
                                     {userAnswer}
@@ -196,19 +196,19 @@ export default function SubmissionReport({
                     </Card>
 
                     {/* Detailed Feedback */}
-                    <Card className="gap-2">
-                        <CardHeader>
+                    <Card className="gap-2 py-4 md:py-6">
+                        <CardHeader className="px-4 md:px-6">
                             <CardTitle className="flex items-center gap-2 text-lg">
                                 <CheckCircle2 className="h-5 w-5 text-green-600" />
                                 Detailed Feedback
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="px-4 md:px-6">
                             <div className="prose prose-sm max-w-none">
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     components={{
-                                        p: ({children}) => <p className="mb-3 text-gray-700 leading-relaxed">{children}</p>,
+                                        p: ({children}) => <p className="mb-3 text-gray-800 leading-relaxed">{children}</p>,
                                         strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
                                     }}
                                 >
@@ -257,7 +257,7 @@ export default function SubmissionReport({
                                     exit={{ height: 0, opacity: 0 }}
                                     transition={{ duration: 0.2 }}
                                 >
-                                    <CardContent className="pt-0">
+                                    <CardContent className="pt-0 px-4 md:px-6">
                                         <div className="mb-3 flex items-center gap-2 flex-wrap">
                                             <span
                                                 className={`rounded-full px-3 py-1 text-xs font-medium ${
@@ -406,7 +406,7 @@ export default function SubmissionReport({
                                     Learn the optimal approach step-by-step
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-6">
+                            <CardContent className="space-y-6 px-4 md:px-6">
                                 {/* Pattern */}
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
@@ -444,7 +444,7 @@ export default function SubmissionReport({
                                 {/* Pseudocode */}
                                 <div>
                                     <h3 className="font-semibold text-gray-900 mb-3">Pseudocode</h3>
-                                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+                                    <pre className="bg-gray-900 text-gray-100 p-2 md:p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
                                         <code>{result.solution_breakdown.pseudocode}</code>
                                     </pre>
                                 </div>

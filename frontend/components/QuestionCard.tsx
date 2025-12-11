@@ -22,7 +22,7 @@ export default function QuestionCard({ question, cardState, showTopics }: Questi
 
     return (
         <Card className="mb-6 bg-white shadow-sm">
-            <CardHeader>
+            <CardHeader className="px-4 md:px-6">
                 <div className="flex items-start justify-between">
                     <div className="flex-1">
                         <div className="mb-2 flex items-center gap-2">
@@ -60,7 +60,7 @@ export default function QuestionCard({ question, cardState, showTopics }: Questi
                     <BookOpen className="h-6 w-6 text-gray-400" />
                 </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 md:px-6">
                 <div className="text-gray-700 leading-relaxed">
                     <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
