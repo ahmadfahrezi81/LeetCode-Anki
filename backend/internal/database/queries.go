@@ -260,6 +260,62 @@ func GetNextReviewCard(userID string) (*models.Card, error) {
 	return &card, nil
 }
 
+// GetNextNewCardReview retrieves an existing card in 'new' state
+// Used to prioritize new cards that have been created but not yet studied
+func GetNextNewCardReview(userID string) (*models.Card, error) {
+	query := `
+		SELECT 
+			r.id, r.user_id, r.question_id, r.card_state, r.quality,
+			r.easiness_factor, r.interval_days, r.interval_minutes,
+			r.current_step, r.repetitions, r.next_review_at,
+			r.last_reviewed_at, r.total_reviews, r.total_lapses, r.created_at,
+			q.id, q.leetcode_id, q.title, q.slug, q.difficulty,
+			q.description_markdown, q.topics, q.created_at
+		FROM reviews r
+		JOIN questions q ON r.question_id = q.id
+		WHERE r.user_id = $1
+		AND r.card_state = 'new'
+		ORDER BY r.created_at ASC
+		LIMIT 1
+	`
+
+	var card models.Card
+	var topics pq.StringArray
+	var quality sql.NullInt32
+	var lastReviewedAt sql.NullTime
+
+	err := DB.QueryRow(query, userID).Scan(
+		&card.Review.ID, &card.Review.UserID, &card.Review.QuestionID,
+		&card.Review.CardState, &quality, &card.Review.EasinessFactor,
+		&card.Review.IntervalDays, &card.Review.IntervalMinutes,
+		&card.Review.CurrentStep, &card.Review.Repetitions,
+		&card.Review.NextReviewAt, &lastReviewedAt,
+		&card.Review.TotalReviews, &card.Review.TotalLapses, &card.Review.CreatedAt,
+		&card.Question.ID, &card.Question.LeetcodeID, &card.Question.Title,
+		&card.Question.Slug, &card.Question.Difficulty,
+		&card.Question.DescriptionMarkdown, &topics,
+		&card.Question.CreatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if quality.Valid {
+		q := int(quality.Int32)
+		card.Review.Quality = &q
+	}
+	if lastReviewedAt.Valid {
+		card.Review.LastReviewedAt = &lastReviewedAt.Time
+	}
+	card.Question.Topics = topics
+
+	return &card, nil
+}
+
 // GetNewCardsStudiedToday counts how many new cards the user has studied today
 func GetNewCardsStudiedToday(userID string) (int, error) {
 	query := `

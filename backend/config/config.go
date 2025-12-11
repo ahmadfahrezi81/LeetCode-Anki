@@ -41,7 +41,7 @@ func Load() error {
 		AllowOrigin:       getEnv("ALLOW_ORIGIN", "http://localhost:3000"), // <- Add this
 
 		// Anki-style limits (with defaults)
-		NewCardsPerDay: getEnvInt("NEW_CARDS_PER_DAY", 20),
+		NewCardsPerDay: getEnvInt("NEW_CARDS_PER_DAY", 5),
 		ReviewsPerDay:  getEnvInt("REVIEWS_PER_DAY", 200),
 		LearnAheadMins: getEnvInt("LEARN_AHEAD_MINS", 20),
 	}

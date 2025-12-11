@@ -204,11 +204,11 @@ export default function SubmissionReport({
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="px-4 md:px-6">
-                            <div className="prose prose-sm max-w-none">
+                            <div className="prose max-w-none">
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     components={{
-                                        p: ({children}) => <p className="mb-3 text-gray-800 leading-relaxed">{children}</p>,
+                                        p: ({children}) => <p className="mb-3 text-gray-700 leading-relaxed">{children}</p>,
                                         strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
                                     }}
                                 >
