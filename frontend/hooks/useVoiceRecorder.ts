@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
 interface VoiceRecorderCallbacks {
@@ -16,10 +16,27 @@ export function useVoiceRecorder(
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+
+    // Cleanup stream on unmount
+    useEffect(() => {
+        return () => {
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, []);
 
     const startRecording = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            let stream = streamRef.current;
+            
+            // Re-use existing stream if available and active, otherwise request new permission
+            if (!stream || !stream.active) {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                streamRef.current = stream;
+            }
+
             const recorder = new MediaRecorder(stream);
             const chunks: Blob[] = [];
 
@@ -62,10 +79,9 @@ export function useVoiceRecorder(
                     alert('Failed to transcribe audio. Please try again.');
                 } finally {
                     setIsTranscribing(false);
+                    // NOTE: We do NOT stop the stream tracks here.
+                    // keeping the stream active allows subsequent recordings without re-prompting.
                 }
-
-                // Stop all tracks
-                stream.getTracks().forEach(track => track.stop());
             };
 
             recorder.start();
