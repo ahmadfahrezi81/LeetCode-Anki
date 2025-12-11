@@ -47,6 +47,12 @@ export function useVoiceRecorder(
             };
 
             recorder.onstop = async () => {
+                // Stop the stream tracks immediately to release microphone
+                if (streamRef.current) {
+                    streamRef.current.getTracks().forEach(track => track.stop());
+                    streamRef.current = null;
+                }
+
                 setIsTranscribing(true);
                 callbacks?.onTranscriptionStart?.();
                 
@@ -79,8 +85,6 @@ export function useVoiceRecorder(
                     alert('Failed to transcribe audio. Please try again.');
                 } finally {
                     setIsTranscribing(false);
-                    // NOTE: We do NOT stop the stream tracks here.
-                    // keeping the stream active allows subsequent recordings without re-prompting.
                 }
             };
 

@@ -106,7 +106,7 @@ export default function SubmissionReport({
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 md:p-8">
+        <div className="min-h-screen bg-gray-50 md:p-8 pb-20">
             <div className="mx-auto max-w-6xl">
                 {/* Header */}
                 <div className="mb-6 flex items-center justify-between">
