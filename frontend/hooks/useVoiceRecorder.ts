@@ -3,7 +3,16 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-export function useVoiceRecorder(onTranscriptionComplete: (text: string) => void) {
+interface VoiceRecorderCallbacks {
+    onTranscriptionStart?: () => void;
+    onTranscriptionSuccess?: () => void;
+    onTranscriptionError?: () => void;
+}
+
+export function useVoiceRecorder(
+    onTranscriptionComplete: (text: string) => void,
+    callbacks?: VoiceRecorderCallbacks
+) {
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
@@ -22,6 +31,8 @@ export function useVoiceRecorder(onTranscriptionComplete: (text: string) => void
 
             recorder.onstop = async () => {
                 setIsTranscribing(true);
+                callbacks?.onTranscriptionStart?.();
+                
                 const audioBlob = new Blob(chunks, { type: 'audio/webm' });
                 
                 // Send to backend for transcription
@@ -44,8 +55,10 @@ export function useVoiceRecorder(onTranscriptionComplete: (text: string) => void
 
                     const result = await response.json();
                     onTranscriptionComplete(result.text);
+                    callbacks?.onTranscriptionSuccess?.();
                 } catch (err) {
                     console.error('Transcription error:', err);
+                    callbacks?.onTranscriptionError?.();
                     alert('Failed to transcribe audio. Please try again.');
                 } finally {
                     setIsTranscribing(false);

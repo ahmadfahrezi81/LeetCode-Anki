@@ -43,6 +43,23 @@ export default function StudyPage() {
     const { isRecording, isTranscribing, startRecording, stopRecording } = useVoiceRecorder(
         (transcribedText) => {
             setAnswer(prev => prev ? `${prev}\n\n${transcribedText}` : transcribedText);
+        },
+        {
+            onTranscriptionStart: () => {
+                setToastMessage("Transcribing audio...");
+                setToastType("loading");
+                setShowToast(true);
+            },
+            onTranscriptionSuccess: () => {
+                setToastMessage("Transcription complete!");
+                setToastType("success");
+                setTimeout(() => setShowToast(false), 2000);
+            },
+            onTranscriptionError: () => {
+                setToastMessage("Transcription failed. Please try again.");
+                setToastType("error");
+                setTimeout(() => setShowToast(false), 3000);
+            },
         }
     );
 
