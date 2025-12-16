@@ -47,7 +47,16 @@ export default function AnswerInput({
                         placeholder="Example: I would use a hashmap to store complements. For each number, I check if target minus the current number exists in the map..."
                         value={answer}
                         onChange={(e) => onAnswerChange(e.target.value)}
-                        className="max-h-60 min-h-32 resize-none bg-white border-gray-300 pr-12"
+                        className="
+                            min-h-[300px] 
+                            max-h-[400px] 
+                            sm:min-h-[160px] 
+                            sm:max-h-[240px] 
+                            resize-none 
+                            bg-white 
+                            border-gray-300 
+                            pr-12
+                        "
                         disabled={isTranscribing}
                     />
                     <Button
