@@ -558,7 +558,7 @@ func GetDueReviewCount(userID string) (int, error) {
 func GetUserStats(userID string) (*models.UserStats, error) {
 	query := `
 		SELECT user_id, total_cards, new_cards, learning_cards, 
-		       review_cards, mature_cards, coins, updated_at
+		       review_cards, mature_cards, new_cards_limit, coins, updated_at
 		FROM user_stats
 		WHERE user_id = $1
 	`
@@ -567,7 +567,7 @@ func GetUserStats(userID string) (*models.UserStats, error) {
 	err := DB.QueryRow(query, userID).Scan(
 		&stats.UserID, &stats.TotalCards, &stats.NewCards,
 		&stats.LearningCards, &stats.ReviewCards, &stats.MatureCards,
-		&stats.Coins, &stats.UpdatedAt,
+		&stats.NewCardsLimit, &stats.Coins, &stats.UpdatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -585,19 +585,35 @@ func GetUserStats(userID string) (*models.UserStats, error) {
 // CreateUserStats initializes stats for a new user
 func CreateUserStats(userID string) (*models.UserStats, error) {
 	query := `
-		INSERT INTO user_stats (user_id, total_cards, new_cards, learning_cards, review_cards, mature_cards, coins)
-		VALUES ($1, 0, 0, 0, 0, 0, 0)
-		RETURNING user_id, total_cards, new_cards, learning_cards, review_cards, mature_cards, coins, updated_at
+		INSERT INTO user_stats (user_id, total_cards, new_cards, learning_cards, review_cards, mature_cards, new_cards_limit, coins)
+		VALUES ($1, 0, 0, 0, 0, 0, 5, 0)
+		RETURNING user_id, total_cards, new_cards, learning_cards, review_cards, mature_cards, new_cards_limit, coins, updated_at
 	`
 
 	var stats models.UserStats
 	err := DB.QueryRow(query, userID).Scan(
 		&stats.UserID, &stats.TotalCards, &stats.NewCards,
 		&stats.LearningCards, &stats.ReviewCards, &stats.MatureCards,
-		&stats.Coins, &stats.UpdatedAt,
+		&stats.NewCardsLimit, &stats.Coins, &stats.UpdatedAt,
 	)
 
 	return &stats, err
+}
+
+// UpdateUserLimit updates the daily new card limit for a user
+func UpdateUserLimit(userID string, limit int) error {
+	query := `
+		UPDATE user_stats
+		SET new_cards_limit = $2, updated_at = NOW()
+		WHERE user_id = $1
+	`
+	// Ensure stats exist first
+	if _, err := GetUserStats(userID); err != nil {
+		return err
+	}
+
+	_, err := DB.Exec(query, userID, limit)
+	return err
 }
 
 // GetUnusedProblemCount counts problems not yet reviewed by user

@@ -53,6 +53,7 @@ func main() {
 	historyHandler := handlers.NewHistoryHandler()
 	transcribeHandler := handlers.NewTranscribeHandler()
 	questionsHandler := handlers.NewQuestionsHandler()
+	settingsHandler := handlers.NewSettingsHandler()
 
 	// Public routes
 	router.GET("/health", healthHandler.HealthCheck)
@@ -83,6 +84,9 @@ func main() {
 		// Admin endpoints
 		api.POST("/admin/refresh-problems", adminHandler.RefreshProblems)
 		api.GET("/admin/problem-stats", adminHandler.GetProblemStats)
+
+		// Settings
+		api.POST("/settings/limit", settingsHandler.UpdateDailyLimit)
 	}
 
 	port := config.AppConfig.ServerPort

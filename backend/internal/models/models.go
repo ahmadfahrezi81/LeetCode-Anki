@@ -119,7 +119,8 @@ type UserStats struct {
 	LearningCards int       `json:"learning_cards"`
 	ReviewCards   int       `json:"review_cards"`
 	MatureCards   int       `json:"mature_cards"`
-	Coins         int       `json:"coins"` // Coins earned from gamification
+	NewCardsLimit int       `json:"new_cards_limit"` // User preference for daily new cards
+	Coins         int       `json:"coins"`           // Coins earned from gamification
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 

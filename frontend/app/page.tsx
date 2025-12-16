@@ -23,8 +23,20 @@ import {
     Zap,
     CheckCircle2,
     Timer,
-    Flame
+    Flame,
+    Settings,
+    Menu,
+    X,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 import HistoryTable from "@/components/HistoryTable";
 
@@ -32,6 +44,9 @@ export default function DashboardPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [dailyLimit, setDailyLimit] = useState(5);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     useEffect(() => {
         checkAuth();
@@ -50,6 +65,9 @@ export default function DashboardPage() {
         try {
             const data = await api.getDashboard();
             setDashboard(data);
+            if (data.stats.new_cards_limit) {
+                setDailyLimit(data.stats.new_cards_limit);
+            }
         } catch (err) {
             console.error("Failed to load dashboard:", err);
         } finally {
@@ -134,9 +152,58 @@ export default function DashboardPage() {
                         </div>
                         <span className="font-bold text-lg text-gray-900">LeetAnki</span>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={handleLogout}>
-                        <LogOut className="h-5 w-5 text-gray-500" />
-                    </Button>
+                    <div className="relative">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        >
+                            {isMobileMenuOpen ? (
+                                <X className="h-5 w-5 text-gray-500" />
+                            ) : (
+                                <Menu className="h-5 w-5 text-gray-500" />
+                            )}
+                        </Button>
+
+                        {/* Mobile Dropdown Menu */}
+                        {isMobileMenuOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-white shadow-lg ring-1 ring-black/5 p-2 z-50"
+                            >
+                                <div className="mb-2 px-3 py-2 bg-yellow-50 rounded-lg flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="bg-yellow-100 p-1 rounded-full">
+                                            <Zap className="h-3 w-3 text-yellow-600 fill-yellow-600" />
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-900">Coins</span>
+                                    </div>
+                                    <span className="text-sm font-bold text-gray-900">{dashboard.stats.coins}</span>
+                                </div>
+                                <div className="space-y-1">
+                                    <button
+                                        onClick={() => {
+                                            setIsMobileMenuOpen(false);
+                                            setIsSettingsOpen(true);
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2 font-medium"
+                                    >
+                                        <Settings className="h-4 w-4" />
+                                        Set Daily Limit
+                                    </button>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2 font-medium"
+                                    >
+                                        <LogOut className="h-4 w-4" />
+                                        Logout
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -153,15 +220,21 @@ export default function DashboardPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="bg-yellow-50 px-4 py-2 rounded-xl flex items-center gap-2 border border-yellow-200 shadow-sm">
-                            <div className="bg-yellow-100 p-1.5 rounded-full">
-                                <Zap className="h-4 w-4 text-yellow-600 fill-yellow-600" />
+                        <div className="bg-yellow-50 h-9 px-2 rounded-md flex items-center gap-2 border border-yellow-200 shadow-sm">
+                            <div className="bg-yellow-100 p-1 rounded-full">
+                                <Zap className="h-3.5 w-3.5 text-yellow-600 fill-yellow-600" />
                             </div>
-                            <div>
-                                <div className="text-sm font-bold text-gray-900">{dashboard.stats.coins}</div>
-                                <div className="text-xs text-yellow-700 font-medium">Coins</div>
-                            </div>
+                            <span className="text-sm font-bold text-gray-900">{dashboard.stats.coins}</span>
+                            <span className="text-xs text-yellow-700 font-medium">Coins</span>
                         </div>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setIsSettingsOpen(true)}
+                            className="bg-white"
+                        >
+                            <Settings className="h-4 w-4 text-gray-600" />
+                        </Button>
                         <Button variant="outline" onClick={handleLogout} className="gap-2">
                             <LogOut className="h-4 w-4" />
                             Logout
@@ -293,6 +366,54 @@ export default function DashboardPage() {
                     <HistoryTable />
                 </div>
             </div>
+            {/* Settings Dialog */}
+            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Study Settings</DialogTitle>
+                        <DialogDescription>
+                            Customize your daily learning goals.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-medium text-gray-700">
+                                    New cards per day
+                                </label>
+                                <Input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    value={dailyLimit}
+                                    onChange={(e) => setDailyLimit(parseInt(e.target.value) || 0)}
+                                    className="max-w-[200px]"
+                                />
+                                <p className="text-xs text-gray-500">
+                                    Maximum new cards to show each day
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button 
+                            onClick={async () => {
+                                try {
+                                    await api.updateDailyLimit(dailyLimit);
+                                    setIsSettingsOpen(false);
+                                    // Refresh dashboard to reflect changes (though local state is already updated)
+                                    loadDashboard();
+                                } catch (error) {
+                                    console.error("Failed to update limit:", error);
+                                    alert("Failed to update limit. Please try again.");
+                                }
+                            }}
+                        >
+                            Save Changes
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

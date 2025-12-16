@@ -62,7 +62,13 @@ func (h *ReviewHandler) GetNextCard(c *gin.Context) {
 	}
 
 	// 1.2 If no existing new card, check if we can fetch a FRESH new card
-	newCardsLimit := config.AppConfig.NewCardsPerDay // Default: 5
+	// Fetch user stats to get their personal limit
+	userStats, err := database.GetUserStats(userID)
+	newCardsLimit := config.AppConfig.NewCardsPerDay // Fallback default
+	if err == nil {
+		newCardsLimit = userStats.NewCardsLimit
+	}
+
 	if dueCounts.NewStudiedToday < newCardsLimit {
 		// Try to get a new card
 		question, err := database.GetNewCard(userID)

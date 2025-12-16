@@ -44,6 +44,7 @@ export interface UserStats {
   learning_cards: number;
   review_cards: number;
   mature_cards: number;
+  new_cards_limit: number;
   coins: number;
   updated_at: string;
 }

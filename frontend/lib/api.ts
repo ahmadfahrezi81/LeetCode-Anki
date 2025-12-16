@@ -131,4 +131,11 @@ export const api = {
     // Questions
     getQuestionById: (questionId: string): Promise<{ question: Question }> =>
         apiRequest<{ question: Question }>(`/api/questions/${questionId}`),
+
+    // Settings
+    updateDailyLimit: (limit: number): Promise<{ message: string; new_cards_limit: number }> =>
+        apiRequest("/api/settings/limit", {
+            method: "POST",
+            body: JSON.stringify({ new_cards_limit: limit }),
+        }),
 };
