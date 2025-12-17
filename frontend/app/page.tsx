@@ -47,6 +47,7 @@ export default function DashboardPage() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [dailyLimit, setDailyLimit] = useState(5);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isDesktopMenuOpen, setIsDesktopMenuOpen] = useState(false);
 
     useEffect(() => {
         checkAuth();
@@ -227,18 +228,50 @@ export default function DashboardPage() {
                             <span className="text-sm font-bold text-gray-900">{dashboard.stats.coins}</span>
                             <span className="text-xs text-yellow-700 font-medium">Coins</span>
                         </div>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setIsSettingsOpen(true)}
-                            className="bg-white"
-                        >
-                            <Settings className="h-4 w-4 text-gray-600" />
-                        </Button>
-                        <Button variant="outline" onClick={handleLogout} className="gap-2">
-                            <LogOut className="h-4 w-4" />
-                            Logout
-                        </Button>
+                        <div className="relative">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setIsDesktopMenuOpen(!isDesktopMenuOpen)}
+                                className="bg-white"
+                            >
+                                {isDesktopMenuOpen ? (
+                                    <X className="h-4 w-4 text-gray-600" />
+                                ) : (
+                                    <Menu className="h-4 w-4 text-gray-600" />
+                                )}
+                            </Button>
+
+                            {/* Desktop Dropdown Menu */}
+                            {isDesktopMenuOpen && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                    className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-white shadow-lg ring-1 ring-black/5 p-2 z-50"
+                                >
+                                    <div className="space-y-1">
+                                        <button
+                                            onClick={() => {
+                                                setIsDesktopMenuOpen(false);
+                                                setIsSettingsOpen(true);
+                                            }}
+                                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2 font-medium"
+                                        >
+                                            <Settings className="h-4 w-4" />
+                                            Set Daily Limit
+                                        </button>
+                                        <button
+                                            onClick={handleLogout}
+                                            className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2 font-medium"
+                                        >
+                                            <LogOut className="h-4 w-4" />
+                                            Logout
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
