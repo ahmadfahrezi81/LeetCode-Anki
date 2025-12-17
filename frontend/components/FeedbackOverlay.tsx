@@ -7,6 +7,7 @@ interface FeedbackOverlayProps {
     show: boolean;
     score: number;
     isSuccess: boolean;
+    coinsEarned?: number; // Optional bc it might be 0 or not passed initially
     onDismiss: () => void;
 }
 
@@ -14,6 +15,7 @@ export default function FeedbackOverlay({
     show, 
     score, 
     isSuccess, 
+    coinsEarned = 0,
     onDismiss 
 }: FeedbackOverlayProps) {
     return (
@@ -65,6 +67,24 @@ export default function FeedbackOverlay({
                             )}
                         </motion.div>
 
+                        {/* Additional Coins Animation - Only if coins > 0 */}
+                        {coinsEarned > 0 && (
+                            <motion.div
+                                initial={{ y: 20, opacity: 0, scale: 0.5 }}
+                                animate={{ y: -60, opacity: 1, scale: 1.2 }}
+                                transition={{ 
+                                    delay: 0.4,
+                                    type: "spring",
+                                    stiffness: 150,
+                                    damping: 10
+                                }}
+                                className="absolute top-12 right-12 flex items-center gap-1 font-bold text-yellow-600 bg-yellow-100 px-3 py-1.5 rounded-full shadow-sm border border-yellow-300 z-10"
+                            >
+                                <span>+{coinsEarned}</span>
+                                <span className="text-sm">Coins</span>
+                            </motion.div>
+                        )}
+
                         {/* Message */}
                         <motion.div
                             initial={{ y: 10, opacity: 0 }}
@@ -84,19 +104,21 @@ export default function FeedbackOverlay({
                         </motion.div>
 
                         {/* Score */}
-                        <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ delay: 0.3 }}
-                            className={`inline-flex items-center gap-2 px-6 py-3 rounded-full text-2xl font-bold ${
-                                isSuccess 
-                                    ? 'bg-green-100 text-green-700 border-2 border-green-300' 
-                                    : 'bg-orange-100 text-orange-700 border-2 border-orange-300'
-                            }`}
-                        >
-                            <CheckCircle2 className={`h-6 w-6 ${isSuccess ? 'text-green-600' : 'text-orange-600'}`} />
-                            {score}/5
-                        </motion.div>
+                        <div className="flex justify-center gap-3">
+                            <motion.div
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ delay: 0.3 }}
+                                className={`inline-flex items-center gap-2 px-6 py-3 rounded-full text-2xl font-bold ${
+                                    isSuccess 
+                                        ? 'bg-green-100 text-green-700 border-2 border-green-300' 
+                                        : 'bg-orange-100 text-orange-700 border-2 border-orange-300'
+                                }`}
+                            >
+                                <CheckCircle2 className={`h-6 w-6 ${isSuccess ? 'text-green-600' : 'text-orange-600'}`} />
+                                {score}/5
+                            </motion.div>
+                        </div>
 
                         {/* Tap to continue hint */}
                         <motion.p

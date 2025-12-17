@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, Send, SkipForward, Mic } from "lucide-react";
+import { Lightbulb, Send, SkipForward, Mic, Zap } from "lucide-react";
 
 interface AnswerInputProps {
     answer: string;
@@ -90,11 +90,11 @@ export default function AnswerInput({
                         className="flex-[0.4]"
                     >
                         {skipping ? (
-                            <>Processing...</>
+                            <span className="text-sm">Processing...</span>
                         ) : (
                             <>
-                                <SkipForward className="mr-2 h-4 w-4" />
-                                Skip (30 min)
+                                <SkipForward className="h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Skip (30 min)</span>
                             </>
                         )}
                     </Button>
@@ -106,10 +106,16 @@ export default function AnswerInput({
                         {submitting ? (
                             <>Processing...</>
                         ) : (
-                            <>
+                            <div className="flex items-center gap-1.5">
                                 <Send className="mr-2 h-4 w-4" />
-                                Submit Answer
-                            </>
+                                <span>Submit Answer</span>
+                                <div className="flex items-center gap-1 ml-1 bg-blue-700/50 pl-1.5 pr-1 py-0.5 rounded-full border border-blue-500/30">
+                                    <span className="text-blue-100 text-md font-bold">+</span>
+                                    <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-600">
+                                        <Zap className="h-2 w-2 text-yellow-600 fill-yellow-600" />
+                                    </div>
+                                </div>
+                            </div>
                         )}
                     </Button>
                 </div>

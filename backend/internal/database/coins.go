@@ -16,7 +16,7 @@ func IncrementUserCoins(userID string, amount int) (int, error) {
 	err := DB.QueryRow(query, amount, userID).Scan(&newTotal)
 	if err == sql.ErrNoRows {
 		// If user_stats doesn't exist, create it first
-		_, err := CreateUserStats(userID)
+		_, err = CreateUserStats(userID)
 		if err != nil {
 			return 0, err
 		}

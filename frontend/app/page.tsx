@@ -221,7 +221,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="bg-yellow-50 h-9 px-2 rounded-md flex items-center gap-2 border border-yellow-200 shadow-sm">
-                            <div className="bg-yellow-100 p-1 rounded-full">
+                            <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-600">
                                 <Zap className="h-3.5 w-3.5 text-yellow-600 fill-yellow-600" />
                             </div>
                             <span className="text-sm font-bold text-gray-900">{dashboard.stats.coins}</span>
@@ -290,7 +290,19 @@ export default function DashboardPage() {
                                 onClick={() => router.push("/study")}
                                 disabled={!hasCardsAvailable}
                             >
-                                {isReviewMode ? "Start Review Session" : "Learn New Cards"}
+                                <div className="flex items-center gap-2">
+                                    <span>{isReviewMode ? "Start Review Session" : "Learn New Cards"}</span>
+                                    <div className={`flex items-center gap-1 pl-1.5 pr-1 py-0.5 rounded-full border ${
+                                        isReviewMode
+                                            ? "bg-blue-50 border-blue-100"
+                                            : "bg-blue-700/50 border-blue-500/30"
+                                    }`}>
+                                        <span className={`text-xs font-bold ${isReviewMode ? "text-blue-600" : "text-blue-100"}`}>+</span>
+                                        <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-600">
+                                            <Zap className="h-3 w-3 text-yellow-600 fill-yellow-600" />
+                                        </div>
+                                    </div>
+                                </div>
                             </Button>
                         </CardContent>
                     </Card>
