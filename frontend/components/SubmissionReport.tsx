@@ -363,7 +363,7 @@ export default function SubmissionReport({
                                                         if (isInline) {
                                                             return (
                                                                 <code
-                                                                    className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-[0.9em] font-mono border border-gray-200 whitespace-nowrap"
+                                                                    className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-[0.9em] font-mono border border-gray-200 break-words whitespace-normal"
                                                                     {...props}
                                                                 >
                                                                     {children}
