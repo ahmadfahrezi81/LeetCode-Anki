@@ -70,12 +70,20 @@ func (h *AdminHandler) GetProblemStats(c *gin.Context) {
 	}
 
 	// Count total
-	database.DB.QueryRow("SELECT COUNT(*) FROM questions").Scan(&stats.Total)
+	if err := database.DB.QueryRow("SELECT COUNT(*) FROM questions").Scan(&stats.Total); err != nil {
+		fmt.Printf("⚠️ Failed to count total questions: %v\n", err)
+	}
 
 	// Count by difficulty
-	database.DB.QueryRow("SELECT COUNT(*) FROM questions WHERE difficulty = 'Easy'").Scan(&stats.Easy)
-	database.DB.QueryRow("SELECT COUNT(*) FROM questions WHERE difficulty = 'Medium'").Scan(&stats.Medium)
-	database.DB.QueryRow("SELECT COUNT(*) FROM questions WHERE difficulty = 'Hard'").Scan(&stats.Hard)
+	if err := database.DB.QueryRow("SELECT COUNT(*) FROM questions WHERE difficulty = 'Easy'").Scan(&stats.Easy); err != nil {
+		fmt.Printf("⚠️ Failed to count easy questions: %v\n", err)
+	}
+	if err := database.DB.QueryRow("SELECT COUNT(*) FROM questions WHERE difficulty = 'Medium'").Scan(&stats.Medium); err != nil {
+		fmt.Printf("⚠️ Failed to count medium questions: %v\n", err)
+	}
+	if err := database.DB.QueryRow("SELECT COUNT(*) FROM questions WHERE difficulty = 'Hard'").Scan(&stats.Hard); err != nil {
+		fmt.Printf("⚠️ Failed to count hard questions: %v\n", err)
+	}
 
 	c.JSON(http.StatusOK, stats)
 }
@@ -103,7 +111,10 @@ func (h *AdminHandler) insertProblem(problem *services.LeetCodeProblem) error {
 	}
 
 	leetcodeID := 0
-	fmt.Sscanf(problem.QuestionID, "%d", &leetcodeID)
+	if _, err := fmt.Sscanf(problem.QuestionID, "%d", &leetcodeID); err != nil {
+		// Log error but try to continue or handle gracefully - wait, returning error is safer here as ID is critical
+		return fmt.Errorf("failed to parse LeetCode ID from %s: %w", problem.QuestionID, err)
+	}
 
 	descriptionMarkdown := services.StripHTMLTags(problem.Content)
 

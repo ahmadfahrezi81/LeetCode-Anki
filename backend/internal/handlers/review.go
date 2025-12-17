@@ -28,32 +28,93 @@ func NewReviewHandler() *ReviewHandler {
 	}
 }
 
+// ensureNewCardsQueue fills queue to user's limit
+func (h *ReviewHandler) ensureNewCardsQueue(userID string) error {
+	// 1. Check STRICT daily limit first (how many have we actually fetched today?)
+	fetchedToday, err := database.CountReviewsCreatedToday(userID)
+	if err != nil {
+		return err
+	}
+
+	// Get user's limit
+	userStats, err := database.GetUserStats(userID)
+	if err != nil {
+		return err
+	}
+
+	// Calculate how many more we can strictly fetch today
+	remainingDailyQuota := userStats.NewCardsLimit - fetchedToday
+	if remainingDailyQuota <= 0 {
+		return nil // Already reached daily limit, do NOT fetch more
+	}
+
+	// 2. Check queue capacity (how many are currently waiting?)
+	newInQueue, err := database.CountNewStateCards(userID)
+	if err != nil {
+		return err
+	}
+
+	// Queue space is also limited by the daily limit setting (as a queue size cap)
+	queueSpace := userStats.NewCardsLimit - newInQueue
+	if queueSpace <= 0 {
+		return nil
+	}
+
+	// We can only fetch up to the minimum of (Daily Quota) and (Queue Space)
+	// This ensures we never exceed the daily limit AND never overfill the queue
+	needed := queueSpace
+	if remainingDailyQuota < queueSpace {
+		needed = remainingDailyQuota
+	}
+
+	for i := 0; i < needed; i++ {
+		question, err := database.GetNewCard(userID)
+		if question == nil || err != nil {
+			break
+		}
+
+		review := h.srsService.InitializeNewCard(userID, question.ID)
+		if err := database.CreateReview(review); err != nil {
+			log.Printf("⚠️ Failed to create review for card %s: %v", question.ID, err)
+			continue
+		}
+	}
+
+	// Refresh stats and maybe fetch more questions
+	if err := database.RefreshUserStats(userID); err != nil {
+		log.Printf("⚠️ Failed to refresh user stats: %v", err)
+	}
+	go h.checkAndRefreshProblems(userID)
+
+	return nil
+}
+
 // GetNextCard retrieves the next card following Anki's priority order
 // Priority: 1. New cards (within daily limit, USER REQUESTED PRIORITY) -> 2. Learning cards -> 3. Review cards
 func (h *ReviewHandler) GetNextCard(c *gin.Context) {
 	userID := c.GetString("user_id")
 
-	// Get due counts for response
+	// Fill queue if needed
+	if err := h.ensureNewCardsQueue(userID); err != nil {
+		log.Printf("⚠️ Failed to ensure new cards queue: %v", err)
+	}
+
+	// Get counts
 	dueCounts, err := database.GetDueCountsByType(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch due counts"})
 		return
 	}
 
-	// PRIORITY 1: New cards (check daily limit)
-	// User specifically requested to prioritize 5 new cards a day over reviews
-
-	// 1.1 Check if we have an existing 'new' card that is in progress (already created but not studied)
-	// This fixes the bug where refreshing fetches a NEW card instead of the pending one
-	existingNewCard, err := database.GetNextNewCardReview(userID)
+	// PRIORITY 1: New cards
+	newCard, err := database.GetNextNewCardReview(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch existing new card"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch new card"})
 		return
 	}
-
-	if existingNewCard != nil {
+	if newCard != nil {
 		c.JSON(http.StatusOK, models.NextCardResponse{
-			Card:      existingNewCard,
+			Card:      newCard,
 			Type:      "new",
 			Message:   "New card to learn",
 			DueCounts: *dueCounts,
@@ -61,68 +122,15 @@ func (h *ReviewHandler) GetNextCard(c *gin.Context) {
 		return
 	}
 
-	// 1.2 If no existing new card, check if we can fetch a FRESH new card
-	// Fetch user stats to get their personal limit
-	userStats, err := database.GetUserStats(userID)
-	newCardsLimit := config.AppConfig.NewCardsPerDay // Fallback default
-	if err == nil {
-		newCardsLimit = userStats.NewCardsLimit
-	}
-
-	if dueCounts.NewStudiedToday < newCardsLimit {
-		// Try to get a new card
-		question, err := database.GetNewCard(userID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch new card"})
-			return
-		}
-
-		if question != nil {
-			// Found a new card! Process it.
-
-			// Check if we need to refresh problem pool (background task)
-			go h.checkAndRefreshProblems(userID)
-
-			// Initialize new review record
-			review := h.srsService.InitializeNewCard(userID, question.ID)
-			err = database.CreateReview(review)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create review"})
-				return
-			}
-
-			// Refresh user stats
-			_ = database.RefreshUserStats(userID)
-
-			// Update due counts after creating new card
-			dueCounts.NewStudiedToday++
-			dueCounts.NewAvailable--
-
-			c.JSON(http.StatusOK, models.NextCardResponse{
-				Card: &models.Card{
-					Question: *question,
-					Review:   *review,
-				},
-				Type:      "new",
-				Message:   "New card to learn",
-				DueCounts: *dueCounts,
-			})
-			return
-		}
-		// If question == nil, it means no new cards are available in the DB.
-		// Fall through to check Learning/Review cards.
-	}
-
-	// PRIORITY 2: Learning/Relearning cards (due now)
-	card, err := database.GetNextLearningCard(userID)
+	// PRIORITY 2: Learning cards
+	learningCard, err := database.GetNextLearningCard(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch learning card"})
 		return
 	}
-
-	if card != nil {
+	if learningCard != nil {
 		c.JSON(http.StatusOK, models.NextCardResponse{
-			Card:      card,
+			Card:      learningCard,
 			Type:      "learning",
 			Message:   "Continue learning this card",
 			DueCounts: *dueCounts,
@@ -130,16 +138,15 @@ func (h *ReviewHandler) GetNextCard(c *gin.Context) {
 		return
 	}
 
-	// PRIORITY 3: Review cards (due today)
-	card, err = database.GetNextReviewCard(userID)
+	// PRIORITY 3: Review cards
+	reviewCard, err := database.GetNextReviewCard(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch review card"})
 		return
 	}
-
-	if card != nil {
+	if reviewCard != nil {
 		c.JSON(http.StatusOK, models.NextCardResponse{
-			Card:      card,
+			Card:      reviewCard,
 			Type:      "review",
 			Message:   "Review this card",
 			DueCounts: *dueCounts,
@@ -147,16 +154,24 @@ func (h *ReviewHandler) GetNextCard(c *gin.Context) {
 		return
 	}
 
-	// If we're here, no cards are available to show immediately
-	nextCardTime, _ := database.GetNextDueCardTime(userID)
+	// No cards available
+	nextCardTime, err := database.GetNextDueCardTime(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch next due time"})
+		return
+	}
+
+	userStats, err := database.GetUserStats(userID)
+	newCardsLimit := config.AppConfig.NewCardsPerDay
+	if err == nil && userStats != nil {
+		newCardsLimit = userStats.NewCardsLimit
+	}
 
 	if nextCardTime == nil {
-		// All cards studied!
 		message := "🎉 Congratulations! You've studied all available cards."
 		if dueCounts.NewStudiedToday >= newCardsLimit {
 			message += fmt.Sprintf(" You also reached your daily limit of %d new cards!", newCardsLimit)
 		}
-
 		c.JSON(http.StatusOK, models.NextCardResponse{
 			Card:          nil,
 			Type:          "",
@@ -165,14 +180,8 @@ func (h *ReviewHandler) GetNextCard(c *gin.Context) {
 			DueCounts:     *dueCounts,
 		})
 	} else {
-		// Cards coming up later
 		timeUntil := time.Until(*nextCardTime)
 		message := fmt.Sprintf("No cards due right now. Next card in %s", formatDuration(timeUntil))
-
-		if dueCounts.NewStudiedToday >= newCardsLimit {
-			message = fmt.Sprintf("Daily new card limit reached (%d/%d). %s", dueCounts.NewStudiedToday, newCardsLimit, message)
-		}
-
 		c.JSON(http.StatusOK, models.NextCardResponse{
 			Card:          nil,
 			Type:          "",
@@ -452,7 +461,9 @@ func (h *ReviewHandler) insertProblem(problem *services.LeetCodeProblem) error {
 	}
 
 	leetcodeID := 0
-	fmt.Sscanf(problem.QuestionID, "%d", &leetcodeID)
+	if _, err := fmt.Sscanf(problem.QuestionID, "%d", &leetcodeID); err != nil {
+		return fmt.Errorf("failed to parse LeetCode ID from %s: %w", problem.QuestionID, err)
+	}
 
 	descriptionMarkdown := services.StripHTMLTags(problem.Content)
 

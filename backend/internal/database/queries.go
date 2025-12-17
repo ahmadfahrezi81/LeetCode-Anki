@@ -316,6 +316,32 @@ func GetNextNewCardReview(userID string) (*models.Card, error) {
 	return &card, nil
 }
 
+// CountNewStateCards counts cards in "new" state
+func CountNewStateCards(userID string) (int, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM reviews
+		WHERE user_id = $1 AND card_state = 'new'
+	`
+	var count int
+	err := DB.QueryRow(query, userID).Scan(&count)
+	return count, err
+}
+
+// CountReviewsCreatedToday counts how many reviews were created today
+// Used to enforce daily new card limits regardless of queue state
+func CountReviewsCreatedToday(userID string) (int, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM reviews
+		WHERE user_id = $1
+		AND DATE(created_at) = CURRENT_DATE
+	`
+	var count int
+	err := DB.QueryRow(query, userID).Scan(&count)
+	return count, err
+}
+
 // GetNewCardsStudiedToday counts how many new cards the user has studied today
 func GetNewCardsStudiedToday(userID string) (int, error) {
 	query := `
@@ -382,15 +408,11 @@ func GetDueCountsByType(userID string) (*models.DueCounts, error) {
 		return nil, err
 	}
 
-	// New cards available (not yet started)
+	// New cards available (cards in "new" state)
 	err = DB.QueryRow(`
 		SELECT COUNT(*)
-		FROM questions q
-		WHERE NOT EXISTS (
-			SELECT 1 FROM reviews r
-			WHERE r.question_id = q.id
-			AND r.user_id = $1
-		)
+		FROM reviews
+		WHERE user_id = $1 AND card_state = 'new'
 	`, userID).Scan(&counts.NewAvailable)
 	if err != nil {
 		return nil, err
