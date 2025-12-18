@@ -46,6 +46,9 @@ export interface UserStats {
   mature_cards: number;
   new_cards_limit: number;
   coins: number;
+  current_streak: number;
+  max_streak: number;
+  last_streak_date: string | null;
   updated_at: string;
 }
 
@@ -135,6 +138,7 @@ export interface SubmitAnswerResponse {
   interval_days: number;
   coins_earned: number;
   total_coins: number;
+  current_streak?: number;
 }
 
 

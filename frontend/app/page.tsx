@@ -47,6 +47,8 @@ import {
 import { motion } from "framer-motion";
 import HistoryTable from "@/components/HistoryTable";
 import { LeetCoin } from "@/components/LeetCoin";
+import { StreakFlame } from "@/components/StreakFlame";
+import { StreakDisplay } from "@/components/StreakDisplay";
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -226,6 +228,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
+                        <StreakDisplay count={dashboard.stats.current_streak} active={dashboard.stats.current_streak > 0} />
                         <div className="h-9 px-2 rounded-md flex items-center gap-1">
                             <LeetCoin />
                             <span className="text-lg font-extrabold text-orange-400">{dashboard.stats.coins}</span>

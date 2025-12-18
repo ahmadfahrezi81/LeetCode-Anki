@@ -580,17 +580,24 @@ func GetDueReviewCount(userID string) (int, error) {
 func GetUserStats(userID string) (*models.UserStats, error) {
 	query := `
 		SELECT user_id, total_cards, new_cards, learning_cards, 
-		       review_cards, mature_cards, new_cards_limit, coins, updated_at
+		       review_cards, mature_cards, new_cards_limit, coins,
+		       current_streak, max_streak, last_streak_date, updated_at
 		FROM user_stats
 		WHERE user_id = $1
 	`
 
 	var stats models.UserStats
+	var lastStreakDate sql.NullTime
 	err := DB.QueryRow(query, userID).Scan(
 		&stats.UserID, &stats.TotalCards, &stats.NewCards,
 		&stats.LearningCards, &stats.ReviewCards, &stats.MatureCards,
-		&stats.NewCardsLimit, &stats.Coins, &stats.UpdatedAt,
+		&stats.NewCardsLimit, &stats.Coins,
+		&stats.CurrentStreak, &stats.MaxStreak, &lastStreakDate, &stats.UpdatedAt,
 	)
+
+	if lastStreakDate.Valid {
+		stats.LastStreakDate = &lastStreakDate.Time
+	}
 
 	if err == sql.ErrNoRows {
 		// Create initial stats
@@ -607,19 +614,71 @@ func GetUserStats(userID string) (*models.UserStats, error) {
 // CreateUserStats initializes stats for a new user
 func CreateUserStats(userID string) (*models.UserStats, error) {
 	query := `
-		INSERT INTO user_stats (user_id, total_cards, new_cards, learning_cards, review_cards, mature_cards, new_cards_limit, coins)
-		VALUES ($1, 0, 0, 0, 0, 0, 5, 0)
-		RETURNING user_id, total_cards, new_cards, learning_cards, review_cards, mature_cards, new_cards_limit, coins, updated_at
+		INSERT INTO user_stats (user_id, total_cards, new_cards, learning_cards, review_cards, mature_cards, new_cards_limit, coins, current_streak, max_streak)
+		VALUES ($1, 0, 0, 0, 0, 0, 5, 0, 0, 0)
+		RETURNING user_id, total_cards, new_cards, learning_cards, review_cards, mature_cards, new_cards_limit, coins, current_streak, max_streak, last_streak_date, updated_at
 	`
 
 	var stats models.UserStats
+	var lastStreakDate sql.NullTime
 	err := DB.QueryRow(query, userID).Scan(
 		&stats.UserID, &stats.TotalCards, &stats.NewCards,
 		&stats.LearningCards, &stats.ReviewCards, &stats.MatureCards,
-		&stats.NewCardsLimit, &stats.Coins, &stats.UpdatedAt,
+		&stats.NewCardsLimit, &stats.Coins,
+		&stats.CurrentStreak, &stats.MaxStreak, &lastStreakDate, &stats.UpdatedAt,
 	)
 
+	if lastStreakDate.Valid {
+		stats.LastStreakDate = &lastStreakDate.Time
+	}
+
 	return &stats, err
+}
+
+// UpdateUserStreak handles incrementing or resetting a user's daily streak
+func UpdateUserStreak(userID string) (int, error) {
+	// 1. Get current stats
+	stats, err := GetUserStats(userID)
+	if err != nil {
+		return 0, err
+	}
+
+	now := time.Now()
+	// Use explicit DATE comparison (truncating time)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	// If already updated today, do nothing
+	if stats.LastStreakDate != nil {
+		lastDate := time.Date(stats.LastStreakDate.Year(), stats.LastStreakDate.Month(), stats.LastStreakDate.Day(), 0, 0, 0, 0, stats.LastStreakDate.Location())
+		if lastDate.Equal(today) {
+			return stats.CurrentStreak, nil
+		}
+	}
+
+	newStreak := 1
+	if stats.LastStreakDate != nil {
+		yesterday := today.AddDate(0, 0, -1)
+		lastDate := time.Date(stats.LastStreakDate.Year(), stats.LastStreakDate.Month(), stats.LastStreakDate.Day(), 0, 0, 0, 0, stats.LastStreakDate.Location())
+		if lastDate.Equal(yesterday) {
+			newStreak = stats.CurrentStreak + 1
+		}
+	}
+
+	newMaxStreak := stats.MaxStreak
+	if newStreak > stats.MaxStreak {
+		newMaxStreak = newStreak
+	}
+
+	query := `
+		UPDATE user_stats
+		SET current_streak = $1,
+			max_streak = $2,
+			last_streak_date = $3,
+			updated_at = NOW()
+		WHERE user_id = $4
+	`
+	_, err = DB.Exec(query, newStreak, newMaxStreak, today, userID)
+	return newStreak, err
 }
 
 // UpdateUserLimit updates the daily new card limit for a user

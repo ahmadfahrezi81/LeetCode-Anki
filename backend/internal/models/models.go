@@ -86,8 +86,9 @@ type SubmitAnswerResponse struct {
 	CardState         string             `json:"card_state"`
 	IntervalMinutes   int                `json:"interval_minutes"`
 	IntervalDays      int                `json:"interval_days"`
-	CoinsEarned       int                `json:"coins_earned"` // Coins earned this submission
-	TotalCoins        int                `json:"total_coins"`  // New total coin balance
+	CoinsEarned       int                `json:"coins_earned"`   // Coins earned this submission
+	TotalCoins        int                `json:"total_coins"`    // New total coin balance
+	CurrentStreak     int                `json:"current_streak"` // New daily streak
 }
 
 // SubScores provides granular feedback on different aspects
@@ -113,15 +114,18 @@ type SolutionBreakdown struct {
 
 // UserStats represents user's overall statistics
 type UserStats struct {
-	UserID        string    `json:"user_id"`
-	TotalCards    int       `json:"total_cards"`
-	NewCards      int       `json:"new_cards"`
-	LearningCards int       `json:"learning_cards"`
-	ReviewCards   int       `json:"review_cards"`
-	MatureCards   int       `json:"mature_cards"`
-	NewCardsLimit int       `json:"new_cards_limit"` // User preference for daily new cards
-	Coins         int       `json:"coins"`           // Coins earned from gamification
-	UpdatedAt     time.Time `json:"updated_at"`
+	UserID         string     `json:"user_id"`
+	TotalCards     int        `json:"total_cards"`
+	NewCards       int        `json:"new_cards"`
+	LearningCards  int        `json:"learning_cards"`
+	ReviewCards    int        `json:"review_cards"`
+	MatureCards    int        `json:"mature_cards"`
+	NewCardsLimit  int        `json:"new_cards_limit"`  // User preference for daily new cards
+	Coins          int        `json:"coins"`            // Coins earned from gamification
+	CurrentStreak  int        `json:"current_streak"`   // Current daily streak
+	MaxStreak      int        `json:"max_streak"`       // All-time high streak
+	LastStreakDate *time.Time `json:"last_streak_date"` // Last day the user studied
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 // DueCounts represents cards due by type (Anki-style)

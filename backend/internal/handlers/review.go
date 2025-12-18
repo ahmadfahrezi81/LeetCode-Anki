@@ -372,6 +372,12 @@ func (h *ReviewHandler) SubmitAnswer(c *gin.Context) {
 	// Refresh user stats
 	_ = database.RefreshUserStats(userID)
 
+	// UPDATE STREAK: Increment or reset daily streak
+	currentStreak, err := database.UpdateUserStreak(userID)
+	if err != nil {
+		log.Printf("⚠️ Failed to update streak: %v", err)
+	}
+
 	// Return response with enhanced info
 	c.JSON(http.StatusOK, models.SubmitAnswerResponse{
 		Score:             score,
@@ -385,6 +391,7 @@ func (h *ReviewHandler) SubmitAnswer(c *gin.Context) {
 		IntervalDays:      review.IntervalDays,
 		CoinsEarned:       coinsEarned,
 		TotalCoins:        newTotalCoins,
+		CurrentStreak:     currentStreak,
 	})
 }
 
