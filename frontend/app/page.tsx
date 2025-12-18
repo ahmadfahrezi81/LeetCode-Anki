@@ -164,8 +164,10 @@ export default function DashboardPage() {
                         <span className="hidden sm:inline font-bold text-lg text-gray-900">LeetAnki</span>
                     </div>
                     <div className="flex items-center gap-3">
-                         <div className="h-9 px-1 rounded-md flex items-center gap-1">
-                           <LeetCoin />
+                        <StreakDisplay count={dashboard.stats.current_streak} active={dashboard.stats.current_streak > 0} />
+
+                        <div className="h-9 px-1 rounded-md flex items-center gap-1">
+                            <LeetCoin />
                             <span className="text-lg font-extrabold text-orange-400">{dashboard.stats.coins}</span>
                         </div>
                         <div className="relative">

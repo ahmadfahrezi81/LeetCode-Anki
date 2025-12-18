@@ -1,4 +1,4 @@
-import { FlameKindling } from "lucide-react";
+import { Flame, FlameKindling } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StreakFlameProps {
@@ -29,7 +29,7 @@ export function StreakFlame({
         className
       )}
     >
-      <FlameKindling
+      <Flame
         size={iconSize}
         className={cn(
           "flex-none transition-colors",
@@ -39,7 +39,7 @@ export function StreakFlame({
           !active && "text-gray-400 fill-gray-300",
           iconClassName
         )}
-        strokeWidth={2}
+        strokeWidth={3}
       />
     </div>
   );
