@@ -113,7 +113,7 @@ export default function AnswerInput({
                                 <Send className="mr-1 h-4 w-4" />
                                 <span>Submit Answer</span>
                                 <div className="flex items-center gap-1 h-9">
-                                    <span className="text-lg font-bold text-orange-400">+</span>
+                                    <span className="text-lg font-bold text-yellow-300">+</span>
                                     <LeetCoin size="sm" />
                                 </div>
                             </div>
