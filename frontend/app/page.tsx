@@ -27,6 +27,10 @@ import {
     Settings,
     Menu,
     X,
+    Coins,
+    Landmark,
+    Gem,
+    Currency,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -151,20 +155,28 @@ export default function DashboardPage() {
                         <div className="bg-blue-600 p-1.5 rounded-lg">
                             <Brain className="h-5 w-5 text-white" />
                         </div>
-                        <span className="font-bold text-lg text-gray-900">LeetAnki</span>
+                        <span className="hidden sm:inline font-bold text-lg text-gray-900">LeetAnki</span>
                     </div>
-                    <div className="relative">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        >
-                            {isMobileMenuOpen ? (
-                                <X className="h-5 w-5 text-gray-500" />
-                            ) : (
-                                <Menu className="h-5 w-5 text-gray-500" />
-                            )}
-                        </Button>
+                    <div className="flex items-center gap-3">
+                         <div className="h-9 px-1 rounded-md flex items-center gap-1.5">
+                            <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-500">
+                                <Zap className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                            </div>
+                            <span className="text-lg font-extrabold text-yellow-500">{dashboard.stats.coins}</span>
+                        </div>
+                        <div className="relative">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            >
+                                {isMobileMenuOpen ? (
+                                    <X className="h-5 w-5 text-gray-500" />
+                                ) : (
+                                    <Menu className="h-5 w-5 text-gray-500" />
+                                )}
+                            </Button>
+                        </div>
 
                         {/* Mobile Dropdown Menu */}
                         {isMobileMenuOpen && (
@@ -174,15 +186,6 @@ export default function DashboardPage() {
                                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
                                 className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-white shadow-lg ring-1 ring-black/5 p-2 z-50"
                             >
-                                <div className="mb-2 px-3 py-2 bg-yellow-50 rounded-lg flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="bg-yellow-100 p-1 rounded-full">
-                                            <Zap className="h-3 w-3 text-yellow-600 fill-yellow-600" />
-                                        </div>
-                                        <span className="text-sm font-medium text-gray-900">Coins</span>
-                                    </div>
-                                    <span className="text-sm font-bold text-gray-900">{dashboard.stats.coins}</span>
-                                </div>
                                 <div className="space-y-1">
                                     <button
                                         onClick={() => {
@@ -221,9 +224,9 @@ export default function DashboardPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="bg-yellow-50 h-9 px-2 rounded-md flex items-center gap-2 border border-yellow-200 shadow-sm">
-                            <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-600">
-                                <Zap className="h-3.5 w-3.5 text-yellow-600 fill-yellow-600" />
+                        <div className="bg-yellow-50 h-9 px-2 rounded-md flex items-center gap-2 border border-yellow-200">
+                            <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-500">
+                                <Zap className="h-3 w-3 text-yellow-500 fill-yellow-500" />
                             </div>
                             <span className="text-sm font-bold text-gray-900">{dashboard.stats.coins}</span>
                             <span className="text-xs text-yellow-700 font-medium">Coins</span>
@@ -331,8 +334,8 @@ export default function DashboardPage() {
                                             : "bg-blue-700/50 border-blue-500/30"
                                     }`}>
                                         <span className={`text-xs font-bold ${isReviewMode ? "text-blue-600" : "text-blue-100"}`}>+</span>
-                                        <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-600">
-                                            <Zap className="h-3 w-3 text-yellow-600 fill-yellow-600" />
+                                       <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-500">
+                                            <Zap className="h-3 w-3 text-yellow-500 fill-yellow-500" />
                                         </div>
                                     </div>
                                 </div>

@@ -432,12 +432,12 @@ func GetDueCountsByType(userID string) (*models.DueCounts, error) {
 func GetTodayStats(userID string) (*models.TodayStats, error) {
 	stats := &models.TodayStats{}
 
-	// Reviews done today
+	// Reviews done today - count all history entries (attempts) instead of unique cards
 	err := DB.QueryRow(`
 		SELECT COUNT(*)
-		FROM reviews
+		FROM history
 		WHERE user_id = $1
-		AND DATE(last_reviewed_at) = CURRENT_DATE
+		AND DATE(submitted_at) = CURRENT_DATE
 	`, userID).Scan(&stats.ReviewsDone)
 	if err != nil {
 		return nil, err

@@ -111,8 +111,8 @@ export default function AnswerInput({
                                 <span>Submit Answer</span>
                                 <div className="flex items-center gap-1 ml-1 bg-blue-700/50 pl-1.5 pr-1 py-0.5 rounded-full border border-blue-500/30">
                                     <span className="text-blue-100 text-md font-bold">+</span>
-                                    <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-600">
-                                        <Zap className="h-2 w-2 text-yellow-600 fill-yellow-600" />
+                                    <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-500">
+                                        <Zap className="h-2 w-2 text-yellow-500 fill-yellow-500" />
                                     </div>
                                 </div>
                             </div>
