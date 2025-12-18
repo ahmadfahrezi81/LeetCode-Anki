@@ -31,6 +31,9 @@ import {
     Landmark,
     Gem,
     Currency,
+    Star,
+    Minus,
+    Plus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,6 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 import HistoryTable from "@/components/HistoryTable";
+import { LeetCoin } from "@/components/LeetCoin";
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -158,11 +162,9 @@ export default function DashboardPage() {
                         <span className="hidden sm:inline font-bold text-lg text-gray-900">LeetAnki</span>
                     </div>
                     <div className="flex items-center gap-3">
-                         <div className="h-9 px-1 rounded-md flex items-center gap-1.5">
-                            <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-500">
-                                <Zap className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                            </div>
-                            <span className="text-lg font-extrabold text-yellow-500">{dashboard.stats.coins}</span>
+                         <div className="h-9 px-1 rounded-md flex items-center gap-1">
+                           <LeetCoin />
+                            <span className="text-lg font-extrabold text-orange-400">{dashboard.stats.coins}</span>
                         </div>
                         <div className="relative">
                             <Button
@@ -224,12 +226,9 @@ export default function DashboardPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="bg-yellow-50 h-9 px-2 rounded-md flex items-center gap-2 border border-yellow-200">
-                            <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-500">
-                                <Zap className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                            </div>
-                            <span className="text-sm font-bold text-gray-900">{dashboard.stats.coins}</span>
-                            <span className="text-xs text-yellow-700 font-medium">Coins</span>
+                        <div className="h-9 px-2 rounded-md flex items-center gap-1">
+                            <LeetCoin />
+                            <span className="text-lg font-extrabold text-orange-400">{dashboard.stats.coins}</span>
                         </div>
                         <div className="relative">
                             <Button
@@ -328,15 +327,9 @@ export default function DashboardPage() {
                             >
                                 <div className="flex items-center gap-2">
                                     <span>{isReviewMode ? "Start Review Session" : "Learn New Cards"}</span>
-                                    <div className={`flex items-center gap-1 pl-1.5 pr-1 py-0.5 rounded-full border ${
-                                        isReviewMode
-                                            ? "bg-blue-50 border-blue-100"
-                                            : "bg-blue-700/50 border-blue-500/30"
-                                    }`}>
-                                        <span className={`text-xs font-bold ${isReviewMode ? "text-blue-600" : "text-blue-100"}`}>+</span>
-                                       <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-500">
-                                            <Zap className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                                        </div>
+                                    <div className="flex items-center gap-1 h-9">
+                                        <span className="text-lg font-bold text-orange-400">+</span>
+                                        <LeetCoin size="sm" />
                                     </div>
                                 </div>
                             </Button>
@@ -414,35 +407,47 @@ export default function DashboardPage() {
                     <HistoryTable />
                 </div>
             </div>
+
             {/* Settings Dialog */}
             <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-                <DialogContent>
-                    <DialogHeader>
+                <DialogContent className="md:w-[400px]">
+                    <DialogHeader className="text-left">
                         <DialogTitle>Study Settings</DialogTitle>
                         <DialogDescription>
                             Customize your daily learning goals.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4">
-                        <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-4">
                             <div className="flex flex-col gap-2">
                                 <label className="text-sm font-medium text-gray-700">
                                     New cards per day
                                 </label>
-                                <Input
-                                    type="number"
-                                    min={0}
-                                    max={100}
-                                    value={dailyLimit}
-                                    onChange={(e) => setDailyLimit(parseInt(e.target.value) || 0)}
-                                    className="max-w-[200px]"
-                                />
-                                <p className="text-xs text-gray-500">
+                                <div className="flex items-center gap-3">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setDailyLimit(Math.max(0, dailyLimit - 1))}
+                                        disabled={dailyLimit <= 0}
+                                    >
+                                        <Minus className="h-4 w-4" />
+                                    </Button>
+                                    <div className="flex-1 text-center">
+                                        <span className="text-2xl font-bold">{dailyLimit}</span>
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setDailyLimit(Math.min(100, dailyLimit + 1))}
+                                        disabled={dailyLimit >= 100}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-gray-500 text-center">
                                     Maximum new cards to show each day
                                 </p>
                             </div>
                         </div>
-                    </div>
                     <DialogFooter>
                         <Button 
                             onClick={async () => {

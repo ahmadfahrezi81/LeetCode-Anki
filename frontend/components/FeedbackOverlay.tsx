@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { LeetCoin } from "./LeetCoin";
 
 interface FeedbackOverlayProps {
     show: boolean;
@@ -80,8 +81,8 @@ export default function FeedbackOverlay({
                                 }}
                                 className="absolute top-12 right-12 flex items-center gap-1 font-bold text-yellow-600 bg-yellow-100 px-3 py-1.5 rounded-full shadow-sm border border-yellow-300 z-10"
                             >
+                                <LeetCoin size="lg" />
                                 <span>+{coinsEarned}</span>
-                                <span className="text-sm">Coins</span>
                             </motion.div>
                         )}
 

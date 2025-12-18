@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Lightbulb, Send, SkipForward, Mic, Zap } from "lucide-react";
+import { LeetCoin } from "./LeetCoin";
 
 interface AnswerInputProps {
     answer: string;
@@ -84,6 +85,7 @@ export default function AnswerInput({
                 </div>
                 <div className="flex gap-2">
                     <Button
+                        size="lg"
                         variant="outline"
                         onClick={onSkip}
                         disabled={skipping || submitting || isTranscribing}
@@ -99,6 +101,7 @@ export default function AnswerInput({
                         )}
                     </Button>
                     <Button
+                        size="lg"
                         onClick={onSubmit}
                         disabled={submitting || !answer.trim() || skipping || isTranscribing}
                         className="flex-[1.6] bg-blue-600 hover:bg-blue-700 text-white"
@@ -107,13 +110,11 @@ export default function AnswerInput({
                             <>Processing...</>
                         ) : (
                             <div className="flex items-center gap-1.5">
-                                <Send className="mr-2 h-4 w-4" />
+                                <Send className="mr-1 h-4 w-4" />
                                 <span>Submit Answer</span>
-                                <div className="flex items-center gap-1 ml-1 bg-blue-700/50 pl-1.5 pr-1 py-0.5 rounded-full border border-blue-500/30">
-                                    <span className="text-blue-100 text-md font-bold">+</span>
-                                    <div className="bg-yellow-100 p-1 rounded-full border-2 border-yellow-500">
-                                        <Zap className="h-2 w-2 text-yellow-500 fill-yellow-500" />
-                                    </div>
+                                <div className="flex items-center gap-1 h-9">
+                                    <span className="text-lg font-bold text-orange-400">+</span>
+                                    <LeetCoin size="sm" />
                                 </div>
                             </div>
                         )}

@@ -28,6 +28,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { SubmitAnswerResponse, History, Card as CardType } from "@/types";
 import { SolutionSkeleton } from "@/components/SolutionSkeleton";
+import { LeetCoin } from "./LeetCoin";
 
 interface SubmissionReportProps {
     result: SubmitAnswerResponse | History;
@@ -116,18 +117,16 @@ export default function SubmissionReport({
                     </h1>
                      {/* Coin Animation */}
                     {'coins_earned' in result && result.coins_earned > 0 && (
-                        <div className="absolute top-20 right-4 md:right-12 z-50">
+                        <div className="absolute top-15 right-6 md:right-6 md:top-20 z-50">
                             <motion.div
                                 initial={{ opacity: 0, y: 20, scale: 0.5 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                                className="flex items-center gap-2 bg-yellow-100 border border-yellow-300 shadow-xl px-4 py-2 rounded-full"
+                                className="flex items-center gap-1 bg-yellow-50 border-2 border-yellow-300 shadow-xl px-3 py-2 rounded-full"
                             >
-                                <div className="bg-yellow-400 p-1.5 rounded-full text-white">
-                                    <Zap className="h-4 w-4 fill-current" />
-                                </div>
+                                <LeetCoin size="lg" />
                                 <div className="flex flex-col">
-                                    <span className="text-yellow-800 font-bold text-lg">+{result.coins_earned}</span>
+                                    <span className="text-yellow-800 font-bold text-xs">+{result.coins_earned}</span>
                                     <span className="text-yellow-700 text-xs font-semibold uppercase tracking-wide">Coins Earned!</span>
                                 </div>
                             </motion.div>
