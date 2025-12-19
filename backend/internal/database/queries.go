@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"leetcode-anki/backend/internal/models"
+	"log"
 	"strconv"
 	"time"
 
@@ -635,6 +636,13 @@ func CreateUserStats(userID string) (*models.UserStats, error) {
 	return &stats, err
 }
 
+// isSameDate checks if two time.Time objects refer to the same calendar date
+func isSameDate(t1, t2 time.Time) bool {
+	y1, m1, d1 := t1.Date()
+	y2, m2, d2 := t2.Date()
+	return y1 == y2 && m1 == m2 && d1 == d2
+}
+
 // UpdateUserStreak handles incrementing or resetting a user's daily streak
 func UpdateUserStreak(userID string) (int, error) {
 	// 1. Get current stats
@@ -644,13 +652,12 @@ func UpdateUserStreak(userID string) (int, error) {
 	}
 
 	now := time.Now()
-	// Use explicit DATE comparison (truncating time)
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
 	// If already updated today, do nothing
 	if stats.LastStreakDate != nil {
-		lastDate := time.Date(stats.LastStreakDate.Year(), stats.LastStreakDate.Month(), stats.LastStreakDate.Day(), 0, 0, 0, 0, stats.LastStreakDate.Location())
-		if lastDate.Equal(today) {
+		if isSameDate(*stats.LastStreakDate, today) {
+			log.Printf("📊 Streak for user %s already updated today", userID)
 			return stats.CurrentStreak, nil
 		}
 	}
@@ -658,10 +665,14 @@ func UpdateUserStreak(userID string) (int, error) {
 	newStreak := 1
 	if stats.LastStreakDate != nil {
 		yesterday := today.AddDate(0, 0, -1)
-		lastDate := time.Date(stats.LastStreakDate.Year(), stats.LastStreakDate.Month(), stats.LastStreakDate.Day(), 0, 0, 0, 0, stats.LastStreakDate.Location())
-		if lastDate.Equal(yesterday) {
+		if isSameDate(*stats.LastStreakDate, yesterday) {
 			newStreak = stats.CurrentStreak + 1
+			log.Printf("🔥 Streak incremented for user %s: %d -> %d", userID, stats.CurrentStreak, newStreak)
+		} else {
+			log.Printf("🧊 Streak reset for user %s: %d -> 1 (last update was %v)", userID, stats.CurrentStreak, stats.LastStreakDate)
 		}
+	} else {
+		log.Printf("🆕 First streak for user %s: 1", userID)
 	}
 
 	newMaxStreak := stats.MaxStreak

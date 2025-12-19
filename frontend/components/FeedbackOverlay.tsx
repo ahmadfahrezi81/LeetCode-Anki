@@ -2,13 +2,11 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { LeetCoin } from "./LeetCoin";
 
 interface FeedbackOverlayProps {
     show: boolean;
     score: number;
     isSuccess: boolean;
-    coinsEarned?: number; // Optional bc it might be 0 or not passed initially
     onDismiss: () => void;
 }
 
@@ -16,7 +14,6 @@ export default function FeedbackOverlay({
     show, 
     score, 
     isSuccess, 
-    coinsEarned = 0,
     onDismiss 
 }: FeedbackOverlayProps) {
     return (
@@ -67,24 +64,6 @@ export default function FeedbackOverlay({
                                 </div>
                             )}
                         </motion.div>
-
-                        {/* Additional Coins Animation - Only if coins > 0 */}
-                        {coinsEarned > 0 && (
-                            <motion.div
-                                initial={{ y: 20, opacity: 0, scale: 0.5 }}
-                                animate={{ y: -60, opacity: 1, scale: 1.2 }}
-                                transition={{ 
-                                    delay: 0.4,
-                                    type: "spring",
-                                    stiffness: 150,
-                                    damping: 10
-                                }}
-                                className="absolute top-12 right-12 flex items-center gap-1 font-bold text-yellow-600 bg-yellow-100 px-3 py-1.5 rounded-full shadow-sm border border-yellow-300 z-10"
-                            >
-                                <LeetCoin size="lg" />
-                                <span>+{coinsEarned}</span>
-                            </motion.div>
-                        )}
 
                         {/* Message */}
                         <motion.div

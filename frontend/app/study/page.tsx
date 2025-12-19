@@ -280,7 +280,6 @@ export default function StudyPage() {
                     show={showFeedbackOverlay}
                     score={result.score}
                     isSuccess={feedbackType === 'success'}
-                    coinsEarned={result.coins_earned}
                     onDismiss={handleFeedbackDismiss}
                 />
             )}

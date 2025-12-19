@@ -454,7 +454,8 @@ export default function DashboardPage() {
                             </div>
                         </div>
                     <DialogFooter>
-                        <Button 
+                        <Button
+                            className="bg-gradient-to-br from-blue-600 to-blue-700"
                             onClick={async () => {
                                 try {
                                     await api.updateDailyLimit(dailyLimit);
